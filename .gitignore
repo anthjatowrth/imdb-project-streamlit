@@ -1,0 +1,29 @@
+# ======================
+# DATA (ne pas versionner)
+# ======================
+data/raw/
+data/interim/
+data/output/
+
+# ======================
+# Python
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# ======================
+# Streamlit secrets
+# ======================
+.streamlit/secrets.toml
+
+# ======================
+# OS / IDE
+# ======================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
