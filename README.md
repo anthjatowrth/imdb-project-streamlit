@@ -1,6 +1,7 @@
 Ce dépôt contient un pipeline de préparation des données IMDb et TMDB, structuré en étapes clairement numérotées.
 Les données ne sont pas versionnées dans le dépôt pour éviter les limitations de taille GitHub et faciliter la reconstruction locale du jeu de données.
 
+```text
 📁 Structure du projet
 imdb-project-streamlit/
 │
@@ -21,9 +22,11 @@ imdb-project-streamlit/
 │
 ├── .gitignore
 └── README.md
+```
 
+---
 🧰 Objectif
-
+---
 Ce projet permet de :
 
 Télécharger les jeux de données bruts (IMDb + TMDB)
@@ -34,15 +37,17 @@ Générer des jeux de données finaux prêts à être utilisés dans une applica
 
 Chaque script sXX_*.py représente une étape spécifique du pipeline.
 
+---
 📥 Installation locale
-
+---
 Clone le dépôt :
 
 git clone https://github.com/anthjatowrth/imdb-project-streamlit.git
 cd imdb-project-streamlit
 
+---
 ⚙️ Environnement Python
-
+---
 Crée un environnement virtuel recommandé :
 
 Windows
@@ -58,8 +63,9 @@ Installe les dépendances :
 
 pip install -r requirements.txt
 
+---
 📂 Création des dossiers de données
-
+---
 Avant d’exécuter les scripts, crée les dossiers nécessaires :
 
 mkdir -p data/raw data/interim data/output
@@ -67,8 +73,9 @@ mkdir -p data/raw data/interim data/output
 
 Ou, si tu as une fonction ensure_dirs() dans config.py, tu peux l’utiliser.
 
+---
 📦 Récupération des données brutes
-
+---
 Les jeux de données ne sont pas inclus dans le dépôt. Tu peux les télécharger depuis les sources officielles :
 
 IMDb : https://datasets.imdbws.com/
@@ -87,9 +94,10 @@ data/raw/title.ratings.tsv.gz
 data/raw/name.basics.tsv.gz
 data/raw/tmdb_full.csv
 
+---
 🔄 Exécution du pipeline
-
-Le pipeline est organisé en 10 étapes. Tu peux les exécuter dans l’ordre :
+---
+Le pipeline est organisé en 10 étapes :
 
 python src/s01_basics.py
 python src/s02_akas_fr.py
@@ -97,6 +105,7 @@ python src/s03_ratings_filtered.py
 ...
 python src/s10_merge_imdb_tmdb.py
 
+Pour les exécuter dans l'ordre, tu dois tout simplement exécuter le fichier pipeline.py
 
 Chaque script produit des fichiers intermédiaires dans :
 
@@ -107,8 +116,9 @@ Puis les résultats finaux dans :
 
 data/output/
 
+---
 📌 À propos des scripts
-
+---
 Voici brièvement ce que font les principaux scripts :
 
 s01_basics.py → lecture des données principales (films, séries)
@@ -133,8 +143,9 @@ s10_merge_imdb_tmdb.py → fusion IMDb + TMDB
 
 (les noms sont explicites et suivent l’ordre du pipeline)
 
+---
 🧪 Validation et tests
-
+---
 Tu peux vérifier la bonne création des fichiers intermédiaires et finaux avec :
 
 ls data/interim
@@ -143,22 +154,19 @@ ls data/output
 
 Et ouvrir les fichiers générés avec pandas par exemple.
 
+---
 🧠 Conseils pratiques
-
+---
 Versionne uniquement le code, jamais les données lourdes 🚫
 
 Utilise .gitignore pour éviter d’inclure les fichiers data dans git
 
 Si tu veux visualiser ou analyser les données, tu peux créer un script explore.py ou une interface Streamlit plus tard
 
-📌 Structure README du dossier data/
 
-Si tu veux afficher la structure même sans fichiers :
-
-data/README.md
-
+---
 # Dossier data
-
+---
 Ce dossier contient les données du pipeline. Il n’est pas versionné.
 
 Structure :
