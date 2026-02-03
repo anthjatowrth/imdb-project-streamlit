@@ -66,13 +66,13 @@ def run():
         "runtimeMinutes":"Durée",
         "genres":"Genre",
         "averageRating":"Note_moyenne",
-        "numVotes":"Popularité",
+        "numVotes":"Nombre_votes",
         "directors":"Réalisateurs",
         "actors_top5":"Casting",
         "producers":"Producteurs",
     })
 
-    df["Catégorie_popularité"] = df["Popularité"].astype(float).apply(popularity_bucket)
+    df["Popularité"] = df["Nombre_votes"].astype(float).apply(popularity_bucket)
 
     out = OUTPUT_DIR / "08_imdb_clean.csv"
     df.to_csv(out, index=False, encoding="utf-8")
@@ -80,3 +80,4 @@ def run():
 
     if __name__ == "__main__":
         run()
+
