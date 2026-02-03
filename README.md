@@ -38,6 +38,17 @@ Générer des jeux de données finaux prêts à être utilisés dans une applica
 Chaque script sXX_*.py représente une étape spécifique du pipeline.
 
 ---
+📌 Contexte du projet
+---
+
+Ce projet a été réalisé dans le cadre d’une formation en data analyse.
+Le dépôt est volontairement très détaillé et structuré, avec de nombreuses étapes intermédiaires et de la documentation.
+
+L’objectif n’est pas uniquement de fournir une application fonctionnelle, mais également de présenter de manière explicite l’ensemble du pipeline de traitement des données : extraction, nettoyage, transformation, enrichissement, fusion des sources et visualisation.
+
+Ce niveau de détail vise à rendre le projet pédagogique, transparent et facilement compréhensible, aussi bien pour l’apprentissage que pour une relecture technique.
+
+---
 📥 Installation locale
 ---
 Clone le dépôt :
@@ -142,6 +153,25 @@ s09_tmdb_clean.py → nettoyage TMDB
 s10_merge_imdb_tmdb.py → fusion IMDb + TMDB
 
 (les noms sont explicites et suivent l’ordre du pipeline)
+
+---
+🛠 quick_summary_function.py
+---
+Le fichier quick_summary_function.py contient une fonction utilitaire personnalisée, développée spécifiquement pour ce projet.
+
+Son objectif est de fournir un aperçu rapide et synthétique d’un jeu de données, notamment :
+
+La structure générale et les dimensions
+
+Les types de colonnes
+
+Les valeurs manquantes
+
+Les statistiques descriptives principales
+
+Des exemples de valeurs
+
+Cette fonction permet d’accélérer la phase d’exploration des données (EDA) et d’identifier rapidement d’éventuels problèmes de qualité avant les étapes de traitement plus avancées.
 
 ---
 🧪 Validation et tests
