@@ -41,8 +41,8 @@ RAW_DIR: Final[Path] = DATA_DIR / "raw"
 INTERIM_DIR: Final[Path] = DATA_DIR / "interim"
 OUTPUT_DIR: Final[Path] = DATA_DIR / "output"
 
-TMDB_CSV_PATH: Final[Path] = RAW_DIR / "tmdb_full.csv"
-
+TMDB_CSV_FILE = RAW_DIR / "tmdb_full.csv"
+TMDB_CSV_DIR : Final[Path] = RAW_DIR /"tmdb_full.csv"
 
 def ensure_dirs() -> None:
     RAW_DIR.mkdir(parents=True, exist_ok=True)

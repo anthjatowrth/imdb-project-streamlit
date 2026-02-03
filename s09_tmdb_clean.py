@@ -1,9 +1,21 @@
 import pandas as pd
 from config import *
 from utils import *
+import gdown
+
+
 
 def run():
-    df = pd.read_csv(TMDB_CSV_PATH, sep=",")
+    url = "https://drive.google.com/file/d/1VB5_gl1fnyBDzcIOXZ5vUSbCY68VZN1v/view"
+
+    output = TMDB_CSV_FILE 
+    if not output.exists():
+        print("Téléchargement TMDB en cours...")
+        gdown.download(url, str(output), fuzzy=True)
+    else:
+        print("TMDB déjà présent — téléchargement ignoré")
+
+    df = pd.read_csv(TMDB_CSV_DIR, sep=",")
 
     df = df[df["adult"] == False].copy()
     df = df.drop(columns=["adult"], errors="ignore")

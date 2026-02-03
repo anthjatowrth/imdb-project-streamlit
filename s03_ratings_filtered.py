@@ -18,7 +18,7 @@ def run():
 
     # ✅ Tes filtres le plus tôt possible
     df = df[df["averageRating"] >= 4].copy()
-    df = df[((df["numVotes"] > 1000) & (df["averageRating"] > 7)) | (df["numVotes"] > 5000)].copy()
+    df = df[((df["numVotes"] > 1000) & (df["averageRating"] > 7.5)) | (df["numVotes"] > 5000)].copy()
 
     out = INTERIM_DIR / "03_ratings_filtered.parquet"
     df.to_parquet(out, index=False)

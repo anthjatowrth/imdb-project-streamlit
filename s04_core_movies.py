@@ -18,7 +18,7 @@ def run():
         (
             (df["runtimeMinutes"] > 120) &
             (df["numVotes"] >= 25000) &
-            (df["averageRating"] > 7)
+            (df["averageRating"] > 7.5)
         )
     ].copy()
 
