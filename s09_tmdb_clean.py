@@ -22,6 +22,10 @@ def run():
         "production_companies_country","spoken_languages","vote_average","vote_count","release_date","title"
     ], errors="ignore")
 
+    
+    df["overview"] = df["overview"].str.replace("\n", " ", regex=False)
+    df["overview"] = df["overview"].str.replace("\r", " ", regex=False)
+
     out = INTERIM_DIR / "09_tmdb_reduced.parquet"
     df.to_parquet(out, index=False)
     print(f"Saved: {out} ({len(df)} rows)")
