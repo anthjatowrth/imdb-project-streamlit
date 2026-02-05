@@ -69,10 +69,11 @@ macOS / Linux
 python3 -m venv .venv
 source .venv/bin/activate
 
-
-Installe les dépendances :
-
-pip install -r requirements.txt
+---
+Installer les dépendances
+---
+py -m pip install --upgrade pip
+py -m pip install -r requirements.txt
 
 ---
 📂 Création des dossiers de données
