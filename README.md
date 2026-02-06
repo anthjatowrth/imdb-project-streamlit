@@ -155,6 +155,13 @@ s10_merge_imdb_tmdb.py → fusion IMDb + TMDB
 
 (les noms sont explicites et suivent l’ordre du pipeline)
 
+
+---
+Présentation datasets et nettoyage 
+---
+<img width="906" height="1276" alt="image" src="https://github.com/user-attachments/assets/e35379ce-28c9-4009-9a2f-9dad4c183daf" />
+
+
 ---
 🛠 quick_summary_function.py
 ---
