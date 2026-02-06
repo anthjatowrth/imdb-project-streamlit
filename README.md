@@ -212,3 +212,6 @@ Structure :
 - raw/     : sources brutes (IMDb, TMDB)
 - interim/ : données intermédiaires nettoyées
 - output/  : jeux de données finaux
+
+
+Coucou c'est moi 
