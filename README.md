@@ -201,18 +201,7 @@ Tu peux vérifier la bonne création des fichiers intermédiaires et finaux avec
 ls data/interim
 ls data/output
 
-
 Et ouvrir les fichiers générés avec pandas par exemple.
-
----
-🧠 Conseils pratiques
----
-Versionne uniquement le code, jamais les données lourdes 🚫
-
-Utilise .gitignore pour éviter d’inclure les fichiers data dans git
-
-Si tu veux visualiser ou analyser les données, tu peux créer un script explore.py ou une interface Streamlit plus tard
-
 
 ---
 # Dossier data
