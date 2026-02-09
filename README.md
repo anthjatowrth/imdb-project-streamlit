@@ -37,11 +37,14 @@ Générer des jeux de données finaux prêts à être utilisés dans une applica
 
 Chaque script sXX_*.py représente une étape spécifique du pipeline.
 
+Fournir une data app Streamlit qui permet à un utilisateur d'obtenir des recommandations de films en fonction de ces choix, basée sur le dataset final filtré. 
+
 ---
 📌 Contexte du projet
 ---
 
-Ce projet a été réalisé dans le cadre d’une formation en data analyse.
+Ce projet a été réalisé dans le cadre d’une formation en data analyse, en collaboration avec Stéphanie Berard, Pierre Guerlais et Waguih Yahya
+
 Le dépôt est volontairement très détaillé et structuré, avec de nombreuses étapes intermédiaires et de la documentation.
 
 L’objectif n’est pas uniquement de fournir une application fonctionnelle, mais également de présenter de manière explicite l’ensemble du pipeline de traitement des données : extraction, nettoyage, transformation, enrichissement, fusion des sources et visualisation.
@@ -62,11 +65,15 @@ cd imdb-project-streamlit
 Crée un environnement virtuel recommandé :
 
 Windows
+
 python -m venv .venv
+
 .venv\Scripts\activate
 
 macOS / Linux
-python3 -m venv .venv
+
+python -m venv .venv
+
 source .venv/bin/activate
 
 ---
@@ -81,9 +88,6 @@ py -m pip install -r requirements.txt
 Avant d’exécuter les scripts, crée les dossiers nécessaires :
 
 mkdir -p data/raw data/interim data/output
-
-
-Ou, si tu as une fonction ensure_dirs() dans config.py, tu peux l’utiliser.
 
 ---
 📦 Récupération des données brutes
@@ -102,8 +106,11 @@ data/raw/
 Par exemple :
 
 data/raw/title.basics.tsv.gz
+
 data/raw/title.ratings.tsv.gz
+
 data/raw/name.basics.tsv.gz
+
 data/raw/tmdb_full.csv
 
 ---
@@ -112,9 +119,13 @@ data/raw/tmdb_full.csv
 Le pipeline est organisé en 10 étapes :
 
 python src/s01_basics.py
+
 python src/s02_akas_fr.py
+
 python src/s03_ratings_filtered.py
+
 ...
+
 python src/s10_merge_imdb_tmdb.py
 
 Pour les exécuter dans l'ordre, tu dois tout simplement exécuter le fichier pipeline.py
