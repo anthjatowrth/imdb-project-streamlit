@@ -10,3 +10,6 @@ st.write(f"Période sélectionnée : {year_min} – {year_max}")
 real = st.text_input("Qui est votre réalisateur préféré ?")
 
 st.write(f"Vous avez choisi : {real}.")
+
+
+st.write("Coucou")

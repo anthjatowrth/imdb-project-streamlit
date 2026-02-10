@@ -16,6 +16,7 @@ showErrorDetails = true
 [server]
 
 headless = true
+runOnSave = true
 
 maxUploadSize = 200
 
