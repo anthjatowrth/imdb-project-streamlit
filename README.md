@@ -5,6 +5,7 @@ Les données ne sont pas versionnées dans le dépôt pour éviter les limitatio
 📁 Structure du projet
 imdb-project-streamlit/
 │
+├── assets
 ├── src/                     # Scripts de pipeline
 │   ├── config.py
 │   ├── pipeline.py
@@ -20,6 +21,8 @@ imdb-project-streamlit/
 │   ├── s09_tmdb_clean.py
 │   └── s10_merge_imdb_tmdb.py
 │
+├── app.py
+├── requirements.txt
 ├── .gitignore
 └── README.md
 ```
