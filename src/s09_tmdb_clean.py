@@ -15,7 +15,7 @@ def run():
     else:
         print("TMDB déjà présent — téléchargement ignoré")
 
-    df = pd.read_csv(TMDB_CSV_DIR, sep=",")
+    df = pd.read_csv(TMDB_CSV_FILE, sep=",")
 
     df = df[df["adult"] == False].copy()
     df = df.drop(columns=["adult"], errors="ignore")

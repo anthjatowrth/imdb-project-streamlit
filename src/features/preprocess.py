@@ -8,4 +8,5 @@
 import pandas as pd
 from src.config import *
 df = pd.read_csv(OUTPUT_DIR / "10_final_imdb_tmdb.csv")
-print(df.head())
+
+
