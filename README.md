@@ -82,9 +82,9 @@ source .venv/bin/activate
 ---
 Installer les dépendances
 ---
-py -m pip install --upgrade pip
+python -m pip install --upgrade pip
 
-py -m pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 ---
 📂 Création des dossiers de données
