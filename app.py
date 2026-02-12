@@ -35,7 +35,7 @@ with col_title:
         "Une app Streamlit pour recommander des films en fonction de tes préférences "
         "(années, genres, réalisateur, film favori…)."
     )
-
+    st.write("Coucou")
 st.divider()
 
 
