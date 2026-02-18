@@ -3,11 +3,25 @@ import streamlit as st
 from src.ui import render_sidebar
 from pathlib import Path
 
-def load_css():
-    css_path = Path("assets/style.css")
-    st.markdown(f"<style>{css_path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
+from src.utils import load_css, clean_text
+
+import sys
+from pathlib import Path
+
+st.set_page_config(page_title="IMDB App", layout="wide")
+
+pages = [
+    st.Page("pages/Catalogue.py", title="Catalogue", icon="📚"),
+    st.Page("pages/Reco_ML.py", title="Recommandations", icon="🎬"),
+]
+
+pg = st.navigation(pages)
+pg.run()
+
+sys.path.append(str(Path(__file__).parent))
 
 load_css()
+
 st.markdown(
     """
     <div style="
@@ -24,9 +38,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# -----------------------------
-# Page config
-# -----------------------------
 render_sidebar()
 
 st.set_page_config(
@@ -36,21 +47,11 @@ st.set_page_config(
     initial_sidebar_state = "expanded"
 )
 
-# -----------------------------
-# Helpers
-# -----------------------------
-def clean_text(s: str) -> str:
-    return " ".join(s.strip().split())
 
 
-
-
-# -----------------------------
-# Header
-# -----------------------------
 col_logo, col_title = st.columns([1, 6])
 with col_logo:
-    # Tu peux remplacer par ton logo local : st.image("assets/logo.png", width=90)
+  
     st.markdown("## 🎬")
 with col_title:
     st.title("IMDb Recommender")
