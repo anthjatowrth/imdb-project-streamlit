@@ -8,71 +8,16 @@ import streamlit as st
 
 from src.config import OUTPUT_DIR
 
+from src.utils import load_css, pick_poster_url, read_csv_clean_columns, find_movie_row
+
 
 st.set_page_config(page_title="Fiche film", layout="wide")
 
-
-
-def load_css() -> None:
-    css_path = Path("assets/style.css")
-    if css_path.exists():
-        st.markdown(f"<style>{css_path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
-
-load_css()
-
-
-TMDB_IMG_BASE = "https://image.tmdb.org/t/p/w500"
-
-def to_poster_url(raw: str | None) -> str | None:
-    if raw is None:
-        return None
-    s = str(raw).strip()
-    if not s or s.lower() == "nan":
-        return None
-    if s.startswith("http://") or s.startswith("https://"):
-        return s
-    if s.startswith("//"):
-        return "https:" + s
-    if s.startswith("/"):
-        return TMDB_IMG_BASE + s
-    return None
-
-
-def pick_poster_url(row: pd.Series) -> str | None:
-    for col in ("Poster1", "Poster2"):
-        if col in row and pd.notna(row[col]):
-            url = to_poster_url(row[col])
-            if url:
-                return url
-    return None
-
-
-def normalize_txt(s: str) -> str:
-    s = "" if s is None else str(s)
-    s = s.strip().lower()
-    s = "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
-    return s
-
-
 @st.cache_data(show_spinner=False)
 def load_df() -> pd.DataFrame:
-    df = pd.read_csv(OUTPUT_DIR / "10_final_imdb_tmdb.csv", sep=",")
-    df.columns = df.columns.str.strip()
-    return df
-
-
-def find_movie(df: pd.DataFrame, title: str) -> pd.Series | None:
-    if not title:
-        return None
-    t = title.strip().lower()
-    mask = df["Titre"].astype(str).str.strip().str.lower().eq(t)
-    if not mask.any():
-        return None
-    return df.loc[mask].iloc[0]
-
+    return read_csv_clean_columns(OUTPUT_DIR / "10_final_imdb_tmdb.csv")
 
 df = load_df()
-
 
 try:
     qp = st.query_params
@@ -109,7 +54,7 @@ if not title_param:
     chosen = st.selectbox("Choisir un film", titles, index=0)
     title_param = chosen
 
-movie = find_movie(df, title_param)
+movie = find_movie_row(df, title_param)
 
 if movie is None:
     st.error("Film introuvable. Vérifie le titre transmis dans l’URL.")
