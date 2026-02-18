@@ -14,22 +14,9 @@ df = pd.read_csv(OUTPUT_DIR / "10_final_imdb_tmdb.csv", sep=",")
 df.columns = df.columns.str.strip()
 
 
-def parse_genres(s: str) -> list[str]:
-    if pd.isna(s) or str(s).strip() == "":
-        return []
-    return [g.strip().lower() for g in str(s).split(",") if g.strip()]
-
-def parse_countries(s: str) -> list[str]:
-    if pd.isna(s) or str(s).strip() == "":
-        return []
-    try:
-        lst = ast.literal_eval(str(s))
-        if isinstance(lst, list):
-            return [str(c).strip().lower() for c in lst if str(c).strip()]
-        return []
-    except Exception:
-        return [c.strip().lower() for c in str(s).replace(";", ",").split(",") if c.strip()]
-
+def parse_simple(s):
+    s = s.replace("[", "").replace("]", "")
+    return [x.strip() for x in s.split(",")]
 
 def clean_txt(s: str) -> str:
     s = "" if s is None else str(s)
@@ -81,18 +68,19 @@ tfidf_dir = TfidfVectorizer(
 
 X_dir  = tfidf_dir.fit_transform(df["txt_director"])
 
-
-df["genres_list"] = df["Genre"].fillna("").apply(parse_genres)
-df["countries_list"] = df["Pays_origine"].fillna("").apply(parse_countries)
+df["genres_list"] = df["Genre"].fillna("").apply(parse_simple)
+df["countries_list"] = df["Pays_origine"].fillna("").apply(parse_simple)
+df["pop_list"] = df["Popularité"].fillna("").apply(parse_simple)
 
 mlb_genre = MultiLabelBinarizer(sparse_output=True)
 mlb_country = MultiLabelBinarizer(sparse_output=True)
+mlb_pop = MultiLabelBinarizer(sparse_output=True)
 
 X_genre = mlb_genre.fit_transform(df["genres_list"])
 X_country = mlb_country.fit_transform(df["countries_list"])
+X_pop = mlb_pop.fit_transform(df["pop_list"])
 
-
-num_cols = ["Durée", "Année_de_sortie"]
+num_cols = ["Durée", "Année_de_sortie","Note_moyenne"]
 for c in num_cols:
     df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
 
@@ -100,39 +88,46 @@ scaler = StandardScaler(with_mean=True, with_std=True)
 X_num = scaler.fit_transform(df[num_cols].values)
 
 
-w_genre   = 0.1
-w_country = 0.1
-w_sum     = 0.1
+w_genre   = 0.2
+w_country = 0.2
+w_sum     = 0.2
 w_cast    = 0.1
-w_dir     = 0.1
+w_dir     = 0.9
 w_num     = 0.1
+w_pop     = 0.1
+
+
+X_genre_n   = normalize(X_genre)
+X_country_n = normalize(X_country)
+X_sum_n     = normalize(X_sum)
+X_cast_n    = normalize(X_cast)
+X_dir_n     = normalize(X_dir)
+X_pop_n     = normalize(X_pop)
+
 
 X = hstack([
-    X_genre   * w_genre,
-    X_country * w_country,
-    X_sum     * w_sum,
-    X_cast    * w_cast,
-    X_dir     * w_dir,
-    csr_matrix(X_num * w_num),
-], format="csr")
-
+    X_genre_n   * w_genre,
+    X_country_n * w_country,
+    X_sum_n     * w_sum,
+    X_cast_n    * w_cast,
+    X_dir_n     * w_dir,
+    X_pop_n     * w_pop,
+    csr_matrix(X_num * w_num),], format="csr")
 
 X = normalize(X) 
-
 
 
 model = NearestNeighbors(metric="cosine", n_neighbors=11)
 model.fit(X)
 
 
-# ---------------------------
-# FILTERS (test bounds)
-# ---------------------------
-YEAR_MIN = 2000
-YEAR_MAX = 2010
+#FILTRES
 
-RATING_COL = "Note_moyenne"   # <-- A MODIFIER : ex "averageRating", "vote_average", "Rating", etc.
-MIN_RATING = 7.5      # note minimale (ex: 7.0/10)
+YEAR_MIN = 1980
+YEAR_MAX = 2025
+
+RATING_COL = "Note_moyenne"  
+MIN_RATING = 6.5
 
 
 def year_in_range(series: pd.Series, y_min: int, y_max: int) -> pd.Series:
@@ -148,7 +143,7 @@ def rating_at_least(series: pd.Series, min_rating: float) -> pd.Series:
 # ---------------------------
 # TEST QUERY
 # ---------------------------
-title_query = "Titanic"
+title_query = "Lost in Translation"
 
 mask_q = df["Titre"].astype(str).str.strip().str.lower().eq(title_query.strip().lower())
 if not mask_q.any():
@@ -156,7 +151,7 @@ if not mask_q.any():
 
 idx = df.index[mask_q][0]
 
-# 1) filtres candidats
+
 mask_year = year_in_range(df["Année_de_sortie"], YEAR_MIN, YEAR_MAX)
 
 if RATING_COL not in df.columns:
@@ -174,11 +169,10 @@ if len(candidate_idx) == 0:
         f"Aucun film candidat avec année {YEAR_MIN}-{YEAR_MAX} et note >= {MIN_RATING}."
     )
 
-# 2) distance cosine vers tous les candidats, puis top-k
-q = X[idx]            # (1, n_features)
-C = X[candidate_idx]  # (n_candidates, n_features)
 
-# X est normalisé => cosine distance = 1 - dot_product
+q = X[idx]         
+C = X[candidate_idx] 
+
 similarities = (q @ C.T).toarray().ravel()
 distances = 1.0 - similarities
 
