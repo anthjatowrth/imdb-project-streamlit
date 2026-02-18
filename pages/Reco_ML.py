@@ -60,13 +60,15 @@ def build_title_index(df: pd.DataFrame) -> pd.DataFrame:
 
     tmp["key"] = tmp["title"].map(lambda x: normalize_txt(x, collapse_spaces=True))
 
-    tmp["dir_len"] = tmp["director"].str.len()
-    tmp = (
-        tmp.sort_values(["title", "year", "dir_len"], ascending=[True, False, False])
-           .drop_duplicates("title", keep="first")
-           .reset_index(drop=True)
-    )
-    return tmp[["title", "year", "director", "key"]]
+    tmp["movie_key"] = (
+        tmp["title"]
+        + "||" + tmp["year"].astype("Int64").astype(str)
+        + "||" + tmp["director"])
+    
+    tmp = tmp.drop_duplicates("movie_key").reset_index(drop=True)
+
+    return tmp[["movie_key", "title", "year", "director", "key"]]
+
 
 
 def get_suggestions(title_index: pd.DataFrame, typed: str, limit: int = 10) -> pd.DataFrame:
@@ -80,7 +82,7 @@ def get_suggestions(title_index: pd.DataFrame, typed: str, limit: int = 10) -> p
         return starts.head(limit)
 
     contains = title_index[keys.str.contains(q, na=False)]
-    sug = pd.concat([starts, contains]).drop_duplicates("title").head(limit)
+    sug = pd.concat([starts, contains]).drop_duplicates("movie_key").head(limit)
     return sug
 
 
@@ -133,7 +135,7 @@ title_index = build_title_index(df2)
 st.session_state.setdefault("selected_title", "")
 st.session_state.setdefault("typed_title_input", "")
 st.session_state.setdefault("reco_df", None)
-
+st.session_state.setdefault("selected_movie_key", "")
 
 def pick_title(t: str) -> None:
     st.session_state.selected_title = t
@@ -171,7 +173,9 @@ with col1:
             index=0,
         )
 
-        st.session_state.selected_title = chosen["title"]
+        st.session_state.selected_movie_key = chosen["movie_key"]
+        st.session_state.selected_title = chosen["title"] 
+
     else:
         st.caption("Tape au moins 2 lettres pour afficher des suggestions.")
 
@@ -251,7 +255,7 @@ if reco_df is not None:
                 rating = row.get("Note_moyenne", "—")
                 dist = row.get("distance_cosine", "—")
 
-                with st.container(border=700):
+                with st.container(border=True):
                     if poster_url:
                         st.image(poster_url, use_container_width=500)
                     else:

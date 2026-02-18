@@ -99,6 +99,11 @@ div[data-testid="stDataFrame"] {
   border: 1px solid rgba(255,255,255,0.08);
 }
 
+/* Cache la navigation multipage native pour éviter le double menu */
+div[data-testid="stSidebarNav"] {
+  display: none;
+}
+
 /* ---- Expander ---- */
 details {
   background: rgba(255,255,255,0.03);

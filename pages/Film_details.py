@@ -7,11 +7,13 @@ import pandas as pd
 import streamlit as st
 
 from src.config import OUTPUT_DIR
-
+from src.ui import render_sidebar
 from src.utils import load_css, pick_poster_url, read_csv_clean_columns, find_movie_row
 
 
 st.set_page_config(page_title="Fiche film", layout="wide")
+load_css()
+render_sidebar()
 
 @st.cache_data(show_spinner=False)
 def load_df() -> pd.DataFrame:
