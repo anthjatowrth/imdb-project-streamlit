@@ -1,20 +1,23 @@
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 import streamlit as st
 
+from src.ui import render_sidebar
 from src.config import OUTPUT_DIR
-from src.reco.engine import build_artifacts, recommend
+from src.reco.engine import build_artifacts, recommend_by_id
 from src.utils import (
     load_css,
     normalize_txt,
     pick_poster_url,
     read_csv_clean_columns,
-    title_exists,
 )
 
 st.set_page_config(page_title="Recommandations", layout="wide")
 load_css()
+render_sidebar()
 
 st.markdown(
     """
@@ -35,8 +38,6 @@ st.markdown(
 CSV_PATH = OUTPUT_DIR / "10_final_imdb_tmdb.csv"
 
 
-#DATA / CACHE :
-
 @st.cache_data(show_spinner=False)
 def load_df(path: str) -> pd.DataFrame:
     return read_csv_clean_columns(path)
@@ -50,7 +51,13 @@ def load_artifacts_from_path(path: str) -> dict:
 
 @st.cache_data(show_spinner=False)
 def build_title_index(df: pd.DataFrame) -> pd.DataFrame:
-    tmp = df[["Titre", "Année_de_sortie", "Réalisateurs"]].copy()
+  
+    needed = ["ID", "Titre", "Année_de_sortie", "Réalisateurs"]
+    for c in needed:
+        if c not in df.columns:
+            df[c] = "" 
+
+    tmp = df[needed].copy()
 
     tmp["title"] = tmp["Titre"].fillna("").astype(str).str.strip()
     tmp = tmp[tmp["title"] != ""]
@@ -60,19 +67,24 @@ def build_title_index(df: pd.DataFrame) -> pd.DataFrame:
 
     tmp["key"] = tmp["title"].map(lambda x: normalize_txt(x, collapse_spaces=True))
 
-    tmp["dir_len"] = tmp["director"].str.len()
-    tmp = (
-        tmp.sort_values(["title", "year", "dir_len"], ascending=[True, False, False])
-           .drop_duplicates("title", keep="first")
-           .reset_index(drop=True)
+   
+    tmp["movie_key"] = (
+        tmp["title"]
+        + "||" + tmp["year"].astype("Int64").astype(str)
+        + "||" + tmp["director"]
     )
-    return tmp[["title", "year", "director", "key"]]
+
+  
+    tmp["ID"] = tmp["ID"].astype(str)
+    tmp = tmp.drop_duplicates("ID").reset_index(drop=True)
+
+    return tmp[["ID", "movie_key", "title", "year", "director", "key"]]
 
 
 def get_suggestions(title_index: pd.DataFrame, typed: str, limit: int = 10) -> pd.DataFrame:
     q = normalize_txt(typed, collapse_spaces=True)
     if len(q) < 2:
-        return title_index.iloc[0:0]  # df vide
+        return title_index.iloc[0:0]  
 
     keys = title_index["key"]
     starts = title_index[keys.str.startswith(q, na=False)]
@@ -80,14 +92,14 @@ def get_suggestions(title_index: pd.DataFrame, typed: str, limit: int = 10) -> p
         return starts.head(limit)
 
     contains = title_index[keys.str.contains(q, na=False)]
-    sug = pd.concat([starts, contains]).drop_duplicates("title").head(limit)
+    sug = pd.concat([starts, contains]).drop_duplicates("ID").head(limit)
     return sug
 
 
 def get_forced_2x3_recos(
     artifacts: dict,
     *,
-    title_query: str,
+    movie_id: Any,
     year_min: int,
     year_max: int,
     min_rating: float | None,
@@ -96,9 +108,9 @@ def get_forced_2x3_recos(
 ) -> pd.DataFrame:
     target_order = ["Très populaire", "Populaire", "Peu populaire"]
 
-    reco_df = recommend(
+    reco_df = recommend_by_id(
         artifacts,
-        title_query=title_query,
+        movie_id=movie_id,
         year_min=int(year_min),
         year_max=int(year_max),
         min_rating=min_rating,
@@ -133,6 +145,8 @@ title_index = build_title_index(df2)
 st.session_state.setdefault("selected_title", "")
 st.session_state.setdefault("typed_title_input", "")
 st.session_state.setdefault("reco_df", None)
+st.session_state.setdefault("selected_movie_key", "")
+st.session_state.setdefault("selected_movie_id", "")
 
 
 def pick_title(t: str) -> None:
@@ -159,10 +173,10 @@ with col1:
         options = sug_df.to_dict("records")
 
         def fmt(o: dict) -> str:
-            year = o["year"]
+            year = o.get("year", None)
             y = str(int(year)) if pd.notna(year) else "—"
-            director = o["director"] if o["director"] else "—"
-            return f"{o['title']} ({y}) — {director}"
+            director = o.get("director", "") or "—"
+            return f"{o.get('title','—')} ({y}) — {director}"
 
         chosen = st.selectbox(
             "Suggestions",
@@ -171,7 +185,10 @@ with col1:
             index=0,
         )
 
-        st.session_state.selected_title = chosen["title"]
+        st.session_state.selected_movie_key = chosen.get("movie_key", "")
+        st.session_state.selected_movie_id = chosen.get("ID", "")
+        st.session_state.selected_title = chosen.get("title", "")
+
     else:
         st.caption("Tape au moins 2 lettres pour afficher des suggestions.")
 
@@ -198,24 +215,24 @@ with col3:
 
 run = st.button("Lancer la recommandation", type="primary")
 
-
 if run:
     with st.spinner("Préparation du moteur de recommandation..."):
         artifacts = load_artifacts_from_path(str(CSV_PATH))
-    title_query = (st.session_state.selected_title or "").strip()
 
-    if not title_query:
-        st.warning("Sélectionne un titre via les suggestions avant de lancer.")
+    movie_id = st.session_state.get("selected_movie_id", "")
+    if movie_id in ("", None):
+        st.warning("Sélectionne un film via les suggestions avant de lancer.")
         st.stop()
 
-    if not title_exists(df2, title_query):
+
+    if not (df2["ID"].astype(str) == str(movie_id)).any():
         st.warning("Le film sélectionné n'existe pas dans la base (passe par les suggestions).")
         st.stop()
 
     try:
         st.session_state.reco_df = get_forced_2x3_recos(
             artifacts,
-            title_query=title_query,
+            movie_id=movie_id,
             year_min=int(year_min),
             year_max=int(year_max),
             min_rating=float(min_rating) if float(min_rating) > 0 else None,
@@ -223,7 +240,6 @@ if run:
     except Exception as e:
         st.error(str(e))
         st.stop()
-
 
 reco_df = st.session_state.reco_df
 if reco_df is not None:
@@ -251,7 +267,7 @@ if reco_df is not None:
                 rating = row.get("Note_moyenne", "—")
                 dist = row.get("distance_cosine", "—")
 
-                with st.container(border=700):
+                with st.container(border=True):
                     if poster_url:
                         st.image(poster_url, use_container_width=500)
                     else:
@@ -265,8 +281,10 @@ if reco_df is not None:
                     if pd.notna(row.get("Réalisateurs", None)):
                         st.caption(f"Réal: {row['Réalisateurs']}")
 
+                    # NOTE:
+               
                     st.page_link(
                         "pages/Film_details.py",
                         label="Voir la fiche",
-                        query_params={"title": title},
-                    )
+                        query_params={"id": str(row["ID"])},
+)
