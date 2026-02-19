@@ -33,21 +33,81 @@ def clean_txt(s: Any) -> str:
     return s
 
 
+def has_genre_token(genres: Any, token: str) -> bool:
+    """
+    True si `token` est présent dans la liste de genres d'un film.
+    Gère: liste python, "['Animation', 'Action']", "Animation, Action", etc.
+    Match exact sur le token normalisé (évite faux positifs).
+    """
+    tok = clean_txt(token)
+
+    if genres is None or (isinstance(genres, float) and np.isnan(genres)):
+        return False
+
+    if isinstance(genres, list):
+        return any(clean_txt(g) == tok for g in genres)
+
+    lst = parse_simple(genres)
+    return any(clean_txt(g) == tok for g in lst)
+
+
+def build_genre_flags(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Ajoute des colonnes booléennes pour certains genres "gated".
+    Colonnes ajoutées:
+      - is_animation
+      - is_documentary
+      - is_horror
+    """
+
+    src = "genres_list" if "genres_list" in df.columns else "Genre"
+
+    def _flag(token: str) -> pd.Series:
+        return df[src].apply(lambda g: has_genre_token(g, token)).astype(bool)
+
+    df["is_animation"] = _flag("Animation")
+    df["is_documentary"] = _flag("Documentary")
+    df["is_horror"] = _flag("Horror")
+    return df
+
+
+def apply_gated_genre_lock(
+    cand: pd.DataFrame,
+    *,
+    ref_row: pd.Series,
+    gated: tuple[str, ...] = ("is_animation", "is_documentary", "is_horror"),
+) -> pd.DataFrame:
+    """
+    Applique la règle:
+      - si le film de référence a le genre gated -> ne garder que les candidats qui l'ont
+      - sinon -> exclure les candidats qui l'ont
+    """
+    out = cand
+    for col in gated:
+        if col not in out.columns or col not in ref_row.index:
+            continue
+        ref_has = bool(ref_row[col])
+        if ref_has:
+            out = out[out[col] == True]
+        else:
+            out = out[out[col] == False]
+    return out
+
+
 def build_artifacts(
     df_raw: pd.DataFrame,
     *,
-    w_genre: float = 0.4,
-    w_country: float = 0.1,
-    w_sum: float = 0.4,
+    w_genre: float = 0.2,
+    w_country: float = 0.25,
+    w_sum: float = 0.3,
     w_cast: float = 0.1,
     w_dir: float = 0.2,
     w_num: float = 0.1,
-    w_pop: float = 0.1,
+    w_pop: float = 0.05,
     n_neighbors: int = 11,
 ) -> dict:
     df = df_raw.copy()
     df.columns = df.columns.str.strip()
-
 
     if "ID" not in df.columns:
         raise ValueError("Colonne 'ID' introuvable : elle est requise pour éviter les homonymes.")
@@ -91,6 +151,9 @@ def build_artifacts(
     df["genres_list"] = df["Genre"].apply(parse_simple)
     df["countries_list"] = df["Pays_origine"].apply(parse_simple)
     df["pop_list"] = df["Popularité"].apply(parse_simple)
+
+
+    df = build_genre_flags(df)
 
     mlb_genre = MultiLabelBinarizer(sparse_output=True)
     mlb_country = MultiLabelBinarizer(sparse_output=True)
@@ -148,6 +211,7 @@ def build_artifacts(
             "w_num": w_num,
             "w_pop": w_pop,
         },
+        "gated_genres": ("is_animation", "is_documentary", "is_horror"),
     }
 
 
@@ -160,6 +224,7 @@ def recommend_by_id(
     min_rating: float | None = None,
     top_n: int = 200,
     candidate_k: int = 1200,
+    gated_lock: bool = True,
 ) -> pd.DataFrame:
     """Recommande à partir d'un ID unique (évite totalement le problème d'homonymes)."""
     df: pd.DataFrame = artifacts["df"]
@@ -171,6 +236,7 @@ def recommend_by_id(
         raise ValueError("ID introuvable dans la base.")
 
     ref_idx = int(np.flatnonzero(mask.values)[0])
+    ref_row = df.iloc[ref_idx]
 
     k = int(min(max(candidate_k, top_n + 50), X.shape[0]))
     distances, indices = model.kneighbors(X[ref_idx], n_neighbors=k)
@@ -182,6 +248,10 @@ def recommend_by_id(
 
     cand = df.iloc[[i for i, _ in pairs]].copy()
     cand["distance_cosine"] = [d for _, d in pairs]
+
+    if gated_lock:
+        gated = artifacts.get("gated_genres", ("is_animation", "is_documentary", "is_horror"))
+        cand = apply_gated_genre_lock(cand, ref_row=ref_row, gated=tuple(gated))
 
     if "Année_de_sortie" in cand.columns:
         cand["Année_de_sortie"] = pd.to_numeric(cand["Année_de_sortie"], errors="coerce").fillna(0).astype(int)
@@ -206,7 +276,8 @@ def recommend_by_id(
     ]
     cols = [c for c in preferred_cols if c in cand.columns]
     other = [c for c in cand.columns if c not in cols]
-    cand = cand[cols + other]
+
+    cand = cand[cols + other].drop(columns=["is_animation", "is_documentary", "is_horror"], errors="ignore")
 
     return cand.reset_index(drop=True)
 
@@ -222,11 +293,13 @@ def recommend(
     min_rating: float | None = None,
     top_n: int = 200,
     candidate_k: int = 1200,
+    gated_lock: bool = True,
 ) -> pd.DataFrame:
     """
     Variante compatible "titre", mais sécurisée :
     - si titre ambigu (plusieurs lignes), exige year et/ou director_query,
       sinon lève une erreur explicite.
+    - applique aussi le lock Animation/Documentary/Horror si gated_lock=True
     """
     df: pd.DataFrame = artifacts["df"]
     X = artifacts["X"]
@@ -242,7 +315,6 @@ def recommend(
 
     if matches.empty:
         raise ValueError("Titre introuvable dans la base.")
-
 
     if year is not None and "Année_de_sortie" in matches.columns:
         y = int(year)
@@ -274,6 +346,7 @@ def recommend(
         )
 
     ref_idx = int(matches.index[0])
+    ref_row = df.iloc[ref_idx]
 
     k = int(min(max(candidate_k, top_n + 50), X.shape[0]))
     distances, indices = model.kneighbors(X[ref_idx], n_neighbors=k)
@@ -285,6 +358,11 @@ def recommend(
 
     cand = df.iloc[[i for i, _ in pairs]].copy()
     cand["distance_cosine"] = [d for _, d in pairs]
+
+
+    if gated_lock:
+        gated = artifacts.get("gated_genres", ("is_animation", "is_documentary", "is_horror"))
+        cand = apply_gated_genre_lock(cand, ref_row=ref_row, gated=tuple(gated))
 
     if "Année_de_sortie" in cand.columns:
         cand["Année_de_sortie"] = pd.to_numeric(cand["Année_de_sortie"], errors="coerce").fillna(0).astype(int)
@@ -308,6 +386,6 @@ def recommend(
     ]
     cols = [c for c in preferred_cols if c in cand.columns]
     other = [c for c in cand.columns if c not in cols]
-    cand = cand[cols + other]
+    cand = cand[cols + other].drop(columns=["is_animation", "is_documentary", "is_horror"], errors="ignore")
 
     return cand.reset_index(drop=True)
