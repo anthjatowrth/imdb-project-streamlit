@@ -92,7 +92,7 @@ w_genre   = 0.2
 w_country = 0.2
 w_sum     = 0.2
 w_cast    = 0.1
-w_dir     = 0.9
+w_dir     = 0.4
 w_num     = 0.1
 w_pop     = 0.1
 
