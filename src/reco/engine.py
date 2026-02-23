@@ -45,15 +45,7 @@ def _apply_gated_lock(cand: pd.DataFrame, ref_row: pd.Series) -> pd.DataFrame:
     return out
 
 
-def _post_filter(
-    cand: pd.DataFrame,
-    *,
-    ref_row: pd.Series,
-    year_min: int,
-    year_max: int,
-    min_rating: float | None,
-    top_n: int,
-    gated_lock: bool) -> pd.DataFrame:
+def _post_filter(cand: pd.DataFrame, *, ref_row: pd.Series, year_min: int, year_max: int, min_rating: float | None, top_n: int, gated_lock: bool) -> pd.DataFrame:
     if gated_lock:
         cand = _apply_gated_lock(cand, ref_row)
 
@@ -82,12 +74,7 @@ def _post_filter(
         .drop(columns=list(GATED_COLS), errors="ignore")
         .reset_index(drop=True))
 
-def _neighbors(
-    artifacts: dict,
-    *,
-    ref_idx: int,
-    top_n: int,
-    candidate_k: int) -> pd.DataFrame:
+def _neighbors(artifacts: dict, *, ref_idx: int, top_n: int, candidate_k: int) -> pd.DataFrame:
     df: pd.DataFrame = artifacts["df"]
     X = artifacts["X"]
     model: NearestNeighbors = artifacts["model"]
@@ -115,6 +102,7 @@ def build_artifacts(
     w_num: float = 0.1,
     w_pop: float = 0.05,
     n_neighbors: int = 11) -> dict:
+    
     df = df_raw.copy()
     df.columns = df.columns.str.strip()
     df = df.reset_index(drop=True) 
@@ -176,18 +164,7 @@ def build_artifacts(
     model = NearestNeighbors(metric="cosine", n_neighbors=int(n_neighbors))
     model.fit(X)
 
-    return {
-        "df": df,
-        "X": X,
-        "model": model,
-        "tfidf_sum": tfidf_sum,
-        "tfidf_cast": tfidf_cast,
-        "tfidf_dir": tfidf_dir,
-        "mlb_genre": mlb_genre,
-        "mlb_country": mlb_country,
-        "mlb_pop": mlb_pop,
-        "scaler": scaler,
-        "num_cols": num_cols}
+    return {"df": df, "X": X, "model": model}
 
 
 def recommend(
