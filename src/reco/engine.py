@@ -10,88 +10,98 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler, normalize
 
+GATED_COLS: tuple[str, ...] = ("is_animation", "is_documentary", "is_horror")
 
-def parse_simple(s: Any) -> list[str]:
-    """Parse une chaîne type "['France', 'USA']" ou "France, USA" en liste.
-    Robuste aux NaN/float/None.
-    """
-    if s is None or (isinstance(s, float) and np.isnan(s)):
-        return []
-    s = str(s).strip()
-    if not s:
-        return []
+
+def parse_simple(x: Any) -> list[str]:
+    if isinstance(x, list):
+        return [str(v).strip() for v in x if str(v).strip()]
+    s = str(x).strip()
     s = s.replace("[", "").replace("]", "")
     parts = [p.strip().strip("'").strip('"') for p in s.split(",")]
     return [p for p in parts if p]
 
 
-def clean_txt(s: Any) -> str:
-    s = "" if s is None or (isinstance(s, float) and np.isnan(s)) else str(s)
-    s = s.lower()
+def clean_txt(x: Any) -> str:
+    s = str(x).lower()
     s = re.sub(r"[,\|;/]+", " ", s)
-    s = re.sub(r"\s+", " ", s).strip()
-    return s
+    return re.sub(r"\s+", " ", s).strip()
 
 
-def has_genre_token(genres: Any, token: str) -> bool:
-    """
-    True si `token` est présent dans la liste de genres d'un film.
-    Gère: liste python, "['Animation', 'Action']", "Animation, Action", etc.
-    Match exact sur le token normalisé (évite faux positifs).
-    """
-    tok = clean_txt(token)
+def _add_gated_flags(df: pd.DataFrame) -> None:
+    def has(token: str) -> pd.Series:
+        t = clean_txt(token)
+        return df["genres_list"].apply(lambda g: any(clean_txt(v) == t for v in g)).astype(bool)
 
-    if genres is None or (isinstance(genres, float) and np.isnan(genres)):
-        return False
-
-    if isinstance(genres, list):
-        return any(clean_txt(g) == tok for g in genres)
-
-    lst = parse_simple(genres)
-    return any(clean_txt(g) == tok for g in lst)
+    df["is_animation"] = has("Animation")
+    df["is_documentary"] = has("Documentary")
+    df["is_horror"] = has("Horror")
 
 
-def build_genre_flags(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Ajoute des colonnes booléennes pour certains genres "gated".
-    Colonnes ajoutées:
-      - is_animation
-      - is_documentary
-      - is_horror
-    """
-
-    src = "genres_list" if "genres_list" in df.columns else "Genre"
-
-    def _flag(token: str) -> pd.Series:
-        return df[src].apply(lambda g: has_genre_token(g, token)).astype(bool)
-
-    df["is_animation"] = _flag("Animation")
-    df["is_documentary"] = _flag("Documentary")
-    df["is_horror"] = _flag("Horror")
-    return df
+def _apply_gated_lock(cand: pd.DataFrame, ref_row: pd.Series) -> pd.DataFrame:
+    out = cand
+    for col in GATED_COLS:
+        out = out[out[col]] if bool(ref_row[col]) else out[~out[col]]
+    return out
 
 
-def apply_gated_genre_lock(
+def _post_filter(
     cand: pd.DataFrame,
     *,
     ref_row: pd.Series,
-    gated: tuple[str, ...] = ("is_animation", "is_documentary", "is_horror"),
-) -> pd.DataFrame:
-    """
-    Applique la règle:
-      - si le film de référence a le genre gated -> ne garder que les candidats qui l'ont
-      - sinon -> exclure les candidats qui l'ont
-    """
-    out = cand
-    for col in gated:
-        if col not in out.columns or col not in ref_row.index:
-            continue
-        ref_has = bool(ref_row[col])
-        if ref_has:
-            out = out[out[col] == True]
-        else:
-            out = out[out[col] == False]
-    return out
+    year_min: int,
+    year_max: int,
+    min_rating: float | None,
+    top_n: int,
+    gated_lock: bool) -> pd.DataFrame:
+    if gated_lock:
+        cand = _apply_gated_lock(cand, ref_row)
+
+    y = cand["Année_de_sortie"].astype(int)
+    cand = cand[y.between(year_min, year_max)]
+
+    if min_rating is not None:
+        cand = cand[cand["Note_moyenne"].astype(float) >= float(min_rating)]
+
+    cand = cand.sort_values("distance_cosine", ascending=True).head(int(top_n))
+
+    cols = [
+        "ID",
+        "Titre",
+        "Année_de_sortie",
+        "Réalisateurs",
+        "Note_moyenne",
+        "Durée",
+        "Genre",
+        "Pays_origine",
+        "distance_cosine"]
+    
+    other = [c for c in cand.columns if c not in cols]
+    return (
+        cand[cols + other]
+        .drop(columns=list(GATED_COLS), errors="ignore")
+        .reset_index(drop=True))
+
+def _neighbors(
+    artifacts: dict,
+    *,
+    ref_idx: int,
+    top_n: int,
+    candidate_k: int) -> pd.DataFrame:
+    df: pd.DataFrame = artifacts["df"]
+    X = artifacts["X"]
+    model: NearestNeighbors = artifacts["model"]
+
+    k = int(min(max(candidate_k, top_n + 50), X.shape[0]))
+    distances, indices = model.kneighbors(X[ref_idx], n_neighbors=k)
+
+    inds = indices.ravel()
+    dists = distances.ravel()
+
+    keep = inds != ref_idx
+    cand = df.iloc[inds[keep]].copy()
+    cand["distance_cosine"] = dists[keep]
+    return cand
 
 
 def build_artifacts(
@@ -101,26 +111,17 @@ def build_artifacts(
     w_country: float = 0.25,
     w_sum: float = 0.3,
     w_cast: float = 0.1,
-    w_dir: float = 0.4,
+    w_dir: float = 0.2,
     w_num: float = 0.1,
     w_pop: float = 0.05,
-    n_neighbors: int = 11,
-) -> dict:
+    n_neighbors: int = 11) -> dict:
     df = df_raw.copy()
     df.columns = df.columns.str.strip()
-
-    if "ID" not in df.columns:
-        raise ValueError("Colonne 'ID' introuvable : elle est requise pour éviter les homonymes.")
-
-    for c in ["Résumé", "Casting", "Réalisateurs", "Producteurs"]:
-        if c not in df.columns:
-            df[c] = ""
-        df[c] = df[c].fillna("").astype(str)
+    df = df.reset_index(drop=True) 
 
     df["txt_summary"] = df["Résumé"].map(clean_txt)
     df["txt_cast"] = df["Casting"].map(clean_txt)
     df["txt_director"] = df["Réalisateurs"].map(clean_txt)
-    df["txt_productor"] = df["Producteurs"].map(clean_txt)
 
     tfidf_common = dict(
         ngram_range=(1, 2),
@@ -128,32 +129,23 @@ def build_artifacts(
         max_df=0.85,
         strip_accents="unicode",
         stop_words="english",
-        lowercase=True,
         token_pattern=r"(?u)\b\w\w+\b",
-    )
+        lowercase=False)
 
     tfidf_sum = TfidfVectorizer(**tfidf_common)
-    X_sum = tfidf_sum.fit_transform(df["txt_summary"])
-
     tfidf_cast = TfidfVectorizer(**tfidf_common)
-    X_cast = tfidf_cast.fit_transform(df["txt_cast"])
-
     tfidf_dir = TfidfVectorizer(**tfidf_common)
+
+    X_sum = tfidf_sum.fit_transform(df["txt_summary"])
+    X_cast = tfidf_cast.fit_transform(df["txt_cast"])
     X_dir = tfidf_dir.fit_transform(df["txt_director"])
 
-    if "Genre" not in df.columns:
-        df["Genre"] = ""
-    if "Pays_origine" not in df.columns:
-        df["Pays_origine"] = ""
-    if "Popularité" not in df.columns:
-        df["Popularité"] = ""
 
     df["genres_list"] = df["Genre"].apply(parse_simple)
     df["countries_list"] = df["Pays_origine"].apply(parse_simple)
     df["pop_list"] = df["Popularité"].apply(parse_simple)
 
-
-    df = build_genre_flags(df)
+    _add_gated_flags(df)
 
     mlb_genre = MultiLabelBinarizer(sparse_output=True)
     mlb_country = MultiLabelBinarizer(sparse_output=True)
@@ -163,28 +155,22 @@ def build_artifacts(
     X_country = mlb_country.fit_transform(df["countries_list"])
     X_pop = mlb_pop.fit_transform(df["pop_list"])
 
-    num_cols = ["Durée", "Année_de_sortie", "Note_moyenne"]
-    for c in num_cols:
-        if c not in df.columns:
-            df[c] = 0
-        df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
 
-    scaler = StandardScaler(with_mean=True, with_std=True)
-    X_num = scaler.fit_transform(df[num_cols].values)
+    num_cols = ["Durée", "Année_de_sortie", "Note_moyenne"]
+    scaler = StandardScaler()
+    X_num = scaler.fit_transform(df[num_cols].to_numpy(dtype=float))
+
 
     X = hstack(
         [
-            normalize(X_genre) * w_genre,
-            normalize(X_country) * w_country,
-            normalize(X_sum) * w_sum,
-            normalize(X_cast) * w_cast,
-            normalize(X_dir) * w_dir,
-            normalize(X_pop) * w_pop,
-            csr_matrix(X_num * w_num),
-        ],
-        format="csr",
-    )
-
+            X_genre * w_genre,
+            X_country * w_country,
+            X_sum * w_sum,
+            X_cast * w_cast,
+            X_dir * w_dir,
+            X_pop * w_pop,
+            csr_matrix(X_num * w_num)], format="csr")
+    
     X = normalize(X)
 
     model = NearestNeighbors(metric="cosine", n_neighbors=int(n_neighbors))
@@ -201,91 +187,14 @@ def build_artifacts(
         "mlb_country": mlb_country,
         "mlb_pop": mlb_pop,
         "scaler": scaler,
-        "num_cols": num_cols,
-        "weights": {
-            "w_genre": w_genre,
-            "w_country": w_country,
-            "w_sum": w_sum,
-            "w_cast": w_cast,
-            "w_dir": w_dir,
-            "w_num": w_num,
-            "w_pop": w_pop,
-        },
-        "gated_genres": ("is_animation", "is_documentary", "is_horror"),
-    }
-
-
-def recommend_by_id(
-    artifacts: dict,
-    *,
-    movie_id: Any,
-    year_min: int = 1950,
-    year_max: int = 2026,
-    min_rating: float | None = None,
-    top_n: int = 200,
-    candidate_k: int = 1200,
-    gated_lock: bool = True,
-) -> pd.DataFrame:
-    """Recommande à partir d'un ID unique (évite totalement le problème d'homonymes)."""
-    df: pd.DataFrame = artifacts["df"]
-    X = artifacts["X"]
-    model: NearestNeighbors = artifacts["model"]
-
-    mask = df["ID"].astype(str).eq(str(movie_id))
-    if not mask.any():
-        raise ValueError("ID introuvable dans la base.")
-
-    ref_idx = int(np.flatnonzero(mask.values)[0])
-    ref_row = df.iloc[ref_idx]
-
-    k = int(min(max(candidate_k, top_n + 50), X.shape[0]))
-    distances, indices = model.kneighbors(X[ref_idx], n_neighbors=k)
-
-    inds = indices.ravel().tolist()
-    dists = distances.ravel().tolist()
-
-    pairs = [(i, d) for i, d in zip(inds, dists) if i != ref_idx]
-
-    cand = df.iloc[[i for i, _ in pairs]].copy()
-    cand["distance_cosine"] = [d for _, d in pairs]
-
-    if gated_lock:
-        gated = artifacts.get("gated_genres", ("is_animation", "is_documentary", "is_horror"))
-        cand = apply_gated_genre_lock(cand, ref_row=ref_row, gated=tuple(gated))
-
-    if "Année_de_sortie" in cand.columns:
-        cand["Année_de_sortie"] = pd.to_numeric(cand["Année_de_sortie"], errors="coerce").fillna(0).astype(int)
-        cand = cand[(cand["Année_de_sortie"] >= int(year_min)) & (cand["Année_de_sortie"] <= int(year_max))]
-
-    if min_rating is not None and "Note_moyenne" in cand.columns:
-        cand["Note_moyenne"] = pd.to_numeric(cand["Note_moyenne"], errors="coerce").fillna(0.0)
-        cand = cand[cand["Note_moyenne"] >= float(min_rating)]
-
-    cand = cand.sort_values("distance_cosine", ascending=True).head(int(top_n))
-
-    preferred_cols = [
-        "ID",
-        "Titre",
-        "Année_de_sortie",
-        "Réalisateurs",
-        "Note_moyenne",
-        "Durée",
-        "Genre",
-        "Pays_origine",
-        "distance_cosine",
-    ]
-    cols = [c for c in preferred_cols if c in cand.columns]
-    other = [c for c in cand.columns if c not in cols]
-
-    cand = cand[cols + other].drop(columns=["is_animation", "is_documentary", "is_horror"], errors="ignore")
-
-    return cand.reset_index(drop=True)
+        "num_cols": num_cols}
 
 
 def recommend(
     artifacts: dict,
     *,
-    title_query: str,
+    movie_id: Any | None = None,
+    title_query: str | None = None,
     year: int | None = None,
     director_query: str | None = None,
     year_min: int = 1950,
@@ -293,99 +202,36 @@ def recommend(
     min_rating: float | None = None,
     top_n: int = 200,
     candidate_k: int = 1200,
-    gated_lock: bool = True,
-) -> pd.DataFrame:
-    """
-    Variante compatible "titre", mais sécurisée :
-    - si titre ambigu (plusieurs lignes), exige year et/ou director_query,
-      sinon lève une erreur explicite.
-    - applique aussi le lock Animation/Documentary/Horror si gated_lock=True
-    """
+    gated_lock: bool = True) -> pd.DataFrame:
     df: pd.DataFrame = artifacts["df"]
-    X = artifacts["X"]
-    model: NearestNeighbors = artifacts["model"]
 
-    if "Titre" not in df.columns:
-        raise ValueError("Colonne 'Titre' introuvable dans la base.")
+    if movie_id is not None:
+        mask = df["ID"].astype(str).eq(str(movie_id)).to_numpy()
+    else:
+        t = str(title_query).strip().lower()
+        mask = df["Titre"].astype(str).str.strip().str.lower().eq(t).to_numpy()
 
-    t = str(title_query).strip().lower()
-    base = df.copy()
-    base["_t"] = base["Titre"].astype(str).str.strip().str.lower()
-    matches = base[base["_t"].eq(t)].copy()
+        if year is not None:
+            mask = mask & (df["Année_de_sortie"].astype(int).to_numpy() == int(year))
 
-    if matches.empty:
-        raise ValueError("Titre introuvable dans la base.")
+        if director_query is not None:
+            dq = clean_txt(director_query)
+            mask = mask & df["txt_director"].str.contains(dq, regex=False).to_numpy()
 
-    if year is not None and "Année_de_sortie" in matches.columns:
-        y = int(year)
-        matches["Année_de_sortie"] = pd.to_numeric(matches["Année_de_sortie"], errors="coerce").fillna(0).astype(int)
-        matches = matches[matches["Année_de_sortie"].eq(y)]
+    if not mask.any():
+        return df.iloc[0:0].copy()
 
-    if director_query is not None:
-        dq = clean_txt(director_query)
-        if "txt_director" in matches.columns:
-            matches = matches[matches["txt_director"].astype(str).str.contains(dq, na=False)]
-        elif "Réalisateurs" in matches.columns:
-            matches = matches[matches["Réalisateurs"].astype(str).map(clean_txt).str.contains(dq, na=False)]
-
-    if matches.empty:
-        opts_cols = [c for c in ["Titre", "Année_de_sortie", "Réalisateurs", "Note_moyenne"] if c in base.columns]
-        opts = base[base["_t"].eq(t)][opts_cols].drop_duplicates().head(20)
-        raise ValueError(
-            "Titre ambigu, et aucun film ne correspond à tes filtres (année/réalisateur). "
-            f"Options disponibles (extrait):\n{opts.to_string(index=False)}"
-        )
-
-    if len(matches) > 1:
-        opts_cols = [c for c in ["Titre", "Année_de_sortie", "Réalisateurs", "Note_moyenne", "ID"] if c in matches.columns]
-        opts = matches[opts_cols].drop_duplicates().head(20)
-        raise ValueError(
-            "Titre ambigu : plusieurs films correspondent. "
-            "Passe year=... et/ou director_query=... (ou utilise recommend_by_id). "
-            f"Options (extrait):\n{opts.to_string(index=False)}"
-        )
-
-    ref_idx = int(matches.index[0])
+    ref_idx = int(np.flatnonzero(mask)[0])
     ref_row = df.iloc[ref_idx]
 
-    k = int(min(max(candidate_k, top_n + 50), X.shape[0]))
-    distances, indices = model.kneighbors(X[ref_idx], n_neighbors=k)
+    cand = _neighbors(artifacts, ref_idx=ref_idx, top_n=top_n, candidate_k=candidate_k)
 
-    inds = indices.ravel().tolist()
-    dists = distances.ravel().tolist()
-
-    pairs = [(i, d) for i, d in zip(inds, dists) if i != ref_idx]
-
-    cand = df.iloc[[i for i, _ in pairs]].copy()
-    cand["distance_cosine"] = [d for _, d in pairs]
-
-
-    if gated_lock:
-        gated = artifacts.get("gated_genres", ("is_animation", "is_documentary", "is_horror"))
-        cand = apply_gated_genre_lock(cand, ref_row=ref_row, gated=tuple(gated))
-
-    if "Année_de_sortie" in cand.columns:
-        cand["Année_de_sortie"] = pd.to_numeric(cand["Année_de_sortie"], errors="coerce").fillna(0).astype(int)
-        cand = cand[(cand["Année_de_sortie"] >= int(year_min)) & (cand["Année_de_sortie"] <= int(year_max))]
-
-    if min_rating is not None and "Note_moyenne" in cand.columns:
-        cand["Note_moyenne"] = pd.to_numeric(cand["Note_moyenne"], errors="coerce").fillna(0.0)
-        cand = cand[cand["Note_moyenne"] >= float(min_rating)]
-
-    cand = cand.sort_values("distance_cosine", ascending=True).head(int(top_n))
-
-    preferred_cols = [
-        "Titre",
-        "Année_de_sortie",
-        "Réalisateurs",
-        "Note_moyenne",
-        "Durée",
-        "Genre",
-        "Pays_origine",
-        "distance_cosine",
-    ]
-    cols = [c for c in preferred_cols if c in cand.columns]
-    other = [c for c in cand.columns if c not in cols]
-    cand = cand[cols + other].drop(columns=["is_animation", "is_documentary", "is_horror"], errors="ignore")
-
-    return cand.reset_index(drop=True)
+    return _post_filter(
+        cand,
+        ref_row=ref_row,
+        year_min=year_min,
+        year_max=year_max,
+        min_rating=min_rating,
+        top_n=top_n,
+        gated_lock=gated_lock,
+    )
