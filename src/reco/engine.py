@@ -101,7 +101,7 @@ def build_artifacts(
     w_country: float = 0.25,
     w_sum: float = 0.3,
     w_cast: float = 0.1,
-    w_dir: float = 0.2,
+    w_dir: float = 0.4,
     w_num: float = 0.1,
     w_pop: float = 0.05,
     n_neighbors: int = 11,

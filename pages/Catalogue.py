@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from src.ui import render_sidebar
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -12,8 +12,9 @@ st.set_page_config(page_title="Catalogue", layout="wide")
 if "go_to_title" in st.session_state:
     title = st.session_state.pop("go_to_title")
     st.switch_page("pages/Film_details.py")  # va sur la page
-    
+
 load_css()
+render_sidebar()
 
 st.title("📚 Catalogue des films")
 st.caption("Filtre le catalogue. Résultats triés par Popularité ↓, Note ↓, Votes ↓. Affichage paginé par 20.")
