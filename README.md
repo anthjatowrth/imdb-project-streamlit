@@ -112,6 +112,7 @@ design personnalisé avec CSS
 ---
 📁 Structure du projet
 ---
+
 imdb-project-streamlit/
 │
 ├── app.py                     # Entrée principale Streamlit
