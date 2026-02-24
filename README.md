@@ -1,220 +1,254 @@
-Ce dépôt contient un pipeline de préparation des données IMDb et TMDB, structuré en étapes clairement numérotées.
-Les données ne sont pas versionnées dans le dépôt pour éviter les limitations de taille GitHub et faciliter la reconstruction locale du jeu de données.
+---
+🎬 Movie Recommender App — IMDb & TMDB Data Pipeline
+---
+Application en ligne :
+==> https://movie-recommender-app.streamlit.app
 
-```text
+---
+🧠 Présentation du projet
+---
+Ce projet consiste à construire un système complet de recommandation de films, depuis le traitement de données brutes jusqu’à leur exploitation dans une application interactive.
+
+Il s’agit d’un projet end-to-end Data comprenant :
+
+ingestion et nettoyage de datasets réels (IMDb & TMDB)
+
+création d’un dataset enrichi
+
+feature engineering pour Machine Learning
+
+développement d’un moteur de recommandation basé sur la similarité
+
+mise en production dans une application Streamlit
+
+L’objectif est de reproduire, à une échelle réaliste, la chaîne complète d’un produit data.
+
+---
+🚀 Accéder à l’application
+---
+==> Demo live :
+https://movie-recommender-app.streamlit.app
+
+L’application permet de :
+
+explorer un catalogue de films
+
+consulter des fiches détaillées
+
+obtenir des recommandations personnalisées
+
+naviguer entre les films similaires
+
+---
+🎯 Objectifs du projet
+---
+Ce projet vise à démontrer :
+
+la capacité à construire un pipeline data complet
+
+la maîtrise du feature engineering pour le NLP
+
+l’implémentation d’un moteur de recommandation basé contenu
+
+la mise en production d’un modèle ML dans une interface utilisateur
+
+---
+📊 Fonctionnalités principales : Pipeline Data Engineering
+--
+nettoyage des données IMDb
+
+filtrage des films pertinents
+
+enrichissement avec TMDB
+
+extraction des informations clés (casting, réalisateurs…)
+
+fusion multi-sources
+
+production d’un dataset final prêt pour le ML
+
+---
+🤖 Moteur de recommandation
+---
+Le système de recommandation repose sur :
+
+un modèle Nearest Neighbors
+
+une similarité cosinus
+
+des features hybrides combinant :
+
+texte (TF-IDF)
+
+catégories (MultiLabelBinarizer)
+
+variables numériques normalisées
+
+Le moteur permet d’identifier des films similaires selon :
+
+genre
+
+casting
+
+réalisateurs
+
+popularité
+
+caractéristiques textuelles
+
+---
+🖥 Application Streamlit
+---
+L’interface propose :
+
+navigation dans un catalogue complet
+
+fiches films détaillées
+
+recommandations dynamiques
+
+design personnalisé avec CSS
+
+---
 📁 Structure du projet
+---
 imdb-project-streamlit/
 │
-├── assets
-├── src/                     # Scripts de pipeline
-│   ├── config.py
-│   ├── pipeline.py
-│   ├── utils.py
-│   ├── s01_basics.py
-│   ├── s02_akas_fr.py
-│   ├── s03_ratings_filtered.py
-│   ├── s04_core_movies.py
-│   ├── s05_crew_directors.py
-│   ├── s06_principals_cast_producers.py
-│   ├── s07_names.py
-│   ├── s08_imdb_final.py
-│   ├── s09_tmdb_clean.py
-│   └── s10_merge_imdb_tmdb.py
+├── app.py                     # Entrée principale Streamlit
 │
-├── app.py
+├── assets/
+│   └── style.css              # Styles personnalisés UI
+│
+├── pages/                     # Pages de l'application
+│   ├── Catalogue.py
+│   ├── Film_details.py
+│   ├── Reco_ML.py
+│   └── Espace_client.py
+│
+├── src/
+│   ├── config.py
+│   ├── pipeline.py            # Orchestration du pipeline
+│   ├── utils.py
+│   ├── ui.py
+│   │
+│   ├── reco/                  # Moteur ML
+│   │   ├── engine.py
+│   │   └── preprocess.py
+│   │
+│   ├── s01 → s10              # Étapes pipeline data
+│
+├── docs/
 ├── requirements.txt
-├── .gitignore
 └── README.md
-```
 
 ---
-🧰 Objectif
+⚙️ Pipeline de traitement des données
 ---
-Ce projet permet de :
+Le pipeline comporte plusieurs étapes :
 
-Télécharger les jeux de données bruts (IMDb + TMDB)
+Chargement des données IMDb
 
-Exécuter une série d’étapes de préparation (nettoyage, filtrage, fusion)
+Filtrage des titres pertinents
 
-Générer des jeux de données finaux prêts à être utilisés dans une application ou une analyse
+Nettoyage des ratings
 
-Chaque script sXX_*.py représente une étape spécifique du pipeline.
+Sélection des films principaux
 
-Fournir une data app Streamlit qui permet à un utilisateur d'obtenir des recommandations de films en fonction de ces choix, basée sur le dataset final filtré. 
+Extraction des réalisateurs
+
+Enrichissement du casting
+
+Consolidation des informations
+
+Création du dataset IMDb final
+
+Nettoyage des données TMDB
+
+Fusion des deux sources
+
+Chaque étape produit des artefacts intermédiaires permettant la reproductibilité du processus.
 
 ---
-📌 Contexte du projet
+🤖 Détails techniques du moteur de recommandation
 ---
+Features utilisées
 
-Ce projet a été réalisé dans le cadre d’une formation en data analyse, en collaboration avec Stéphanie Berard, Pierre Guerlais et Waguih Yahya
+genres
 
-Le dépôt est volontairement très détaillé et structuré, avec de nombreuses étapes intermédiaires et de la documentation.
+pays
 
-L’objectif n’est pas uniquement de fournir une application fonctionnelle, mais également de présenter de manière explicite l’ensemble du pipeline de traitement des données : extraction, nettoyage, transformation, enrichissement, fusion des sources et visualisation.
+popularité
 
-Ce niveau de détail vise à rendre le projet pédagogique, transparent et facilement compréhensible, aussi bien pour l’apprentissage que pour une relecture technique.
+année de sortie
 
----
-📥 Installation locale
----
-Clone le dépôt :
+réalisateurs
 
+texte (casting + description)
+
+Préparation des données
+
+TF-IDF pour les données textuelles
+
+MultiLabelBinarizer pour les catégories
+
+StandardScaler pour les variables numériques
+
+Algorithme utilisé
+NearestNeighbors(metric="cosine")
+
+Ce choix permet :
+
+de gérer efficacement les données sparse
+
+d’obtenir des recommandations pertinentes sur des données textuelles
+
+d’assurer des performances rapides en production
+
+🛠 Installation locale
 git clone https://github.com/anthjatowrth/imdb-project-streamlit.git
 cd imdb-project-streamlit
 
----
-⚙️ Environnement Python
----
-Crée un environnement virtuel recommandé :
-
-Windows
-
 python -m venv .venv
-
 source .venv/Scripts/activate
 
-macOS / Linux
-
-python -m venv .venv
-
-source .venv/bin/activate
+pip install -r requirements.txt
 
 ---
-Installer les dépendances
+▶️ Lancer l’application
 ---
-python -m pip install --upgrade pip
-
-python -m pip install -r requirements.txt
+streamlit run app.py
 
 ---
-📂 Création des dossiers de données
+📦 Données
 ---
-Avant d’exécuter les scripts, crée les dossiers nécessaires :
+Les datasets ne sont pas inclus pour des raisons de taille.
 
-mkdir -p data/raw data/interim data/output
+Sources utilisées :
 
----
-📦 Récupération des données brutes
----
-Les jeux de données ne sont pas inclus dans le dépôt. Tu peux les télécharger depuis les sources officielles :
+IMDb datasets (officiels)
 
-IMDb : https://datasets.imdbws.com/
+export TMDB
 
-TMDB : fichier CSV local ou API
+🎓 Contexte du projet
 
-Télécharge les fichiers dans :
-
-data/raw/
-
-
-Par exemple :
-
-data/raw/title.basics.tsv.gz
-
-data/raw/title.ratings.tsv.gz
-
-data/raw/name.basics.tsv.gz
-
-data/raw/tmdb_full.csv
+Projet réalisé dans le cadre d’une formation Data Analyst à la Wild Code School.
 
 ---
-🔄 Exécution du pipeline
+✨ Points forts du projet
 ---
-Le pipeline est organisé en 10 étapes :
+pipeline data complet et reproductible
 
-python src/s01_basics.py
+fusion multi-sources réalistes
 
-python src/s02_akas_fr.py
+feature engineering avancé
 
-python src/s03_ratings_filtered.py
+moteur de recommandation performant
 
-...
+application interactive déployée
 
-python src/s10_merge_imdb_tmdb.py
-
-Pour les exécuter dans l'ordre, tu dois tout simplement exécuter le fichier pipeline.py
-
-Chaque script produit des fichiers intermédiaires dans :
-
-data/interim/
+architecture modulaire professionnelle
 
 
-Puis les résultats finaux dans :
+👨‍💻 Auteur
 
-data/output/
-
----
-📌 À propos des scripts
----
-Voici brièvement ce que font les principaux scripts :
-
-s01_basics.py → lecture des données principales (films, séries)
-
-s02_akas_fr.py → filtrage des titres français
-
-s03_ratings_filtered.py → filtrage des notes
-
-s04_core_movies.py → extraction des films principaux
-
-s05_crew_directors.py → récupération des réalisateurs
-
-s06_principals_cast_producers.py → casting, producteurs
-
-s07_names.py → données personnes (acteurs, crew)
-
-s08_imdb_final.py → agrégation IMDb finale
-
-s09_tmdb_clean.py → nettoyage TMDB
-
-s10_merge_imdb_tmdb.py → fusion IMDb + TMDB
-
-(les noms sont explicites et suivent l’ordre du pipeline)
-
-
----
-Présentation datasets et nettoyage 
----
-<img width="906" height="1276" alt="image" src="https://github.com/user-attachments/assets/e35379ce-28c9-4009-9a2f-9dad4c183daf" />
-
-
----
-🛠 quick_summary_function.py
----
-Le fichier quick_summary_function.py contient une fonction utilitaire personnalisée, développée spécifiquement pour ce projet.
-
-Son objectif est de fournir un aperçu rapide et synthétique d’un jeu de données, notamment :
-
-La structure générale et les dimensions
-
-Les types de colonnes
-
-Les valeurs manquantes
-
-Les statistiques descriptives principales
-
-Des exemples de valeurs
-
-Cette fonction permet d’accélérer la phase d’exploration des données (EDA) et d’identifier rapidement d’éventuels problèmes de qualité avant les étapes de traitement plus avancées.
-
----
-🧪 Validation et tests
----
-Tu peux vérifier la bonne création des fichiers intermédiaires et finaux avec :
-
-ls data/interim
-ls data/output
-
-Et ouvrir les fichiers générés avec pandas par exemple.
-
----
-# Dossier data
----
-Ce dossier contient les données du pipeline. Il n’est pas versionné.
-
-Structure :
-
-- raw/     : sources brutes (IMDb, TMDB)
-- interim/ : données intermédiaires nettoyées
-- output/  : jeux de données finaux
-
-
+Anthony — Data Analyst 
