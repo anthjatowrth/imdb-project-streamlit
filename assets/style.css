@@ -1,242 +1,755 @@
+/* ============================================================
+   IMDB RECOMMENDER — Palette CSS complète
+   À placer dans : assets/style.css
+   Chargé via inject_custom_css() dans app.py
+   ============================================================ */
+
+/* ── 1. VARIABLES (Design Tokens) ─────────────────────────────────────────── */
 :root {
-  --bg: #1E1E2E;
-  --panel: #2B2B44;
-  --panel-2: #26263E;
+  /* Fonds */
+  --void: #0f0e1a;
+  --deep: #13122a;
+  --surface: #1a1933;
+  --card: #1f1e38;
+  --card-hover: #26254a;
+  --border: #2e2c55;
 
-  --accent: #FF6B3D;
-  --accent-2: #6C63FF;
+  /* Accents */
+  --gold: #e8a020;
+  --gold-light: #f5c855;
+  --violet: #7b68ee;
+  --violet-light: #a78bfa;
+  --violet-glow: rgba(123, 104, 238, 0.25);
+  --electric: #4facfe;
+  --danger: #c0392b;
+  --success: #2ecc71;
 
-  --text: #FFFFFF;
-  --muted: #A8A8C0;
+  /* Texte */
+  --text-primary: #e8f5e9;
+  --text-secondary: #a5d6a7;
+  --text-muted: #4caf50;
 
-  --radius: 18px;
-  --shadow: 0 10px 25px rgba(0,0,0,0.35);
+  /* Gradients */
+  --grad-gold: linear-gradient(135deg, #e8a020, #f5c855);
+  --grad-violet: linear-gradient(135deg, #7b68ee, #a78bfa);
+  --grad-dark: linear-gradient(180deg, #12112a 0%, #0f0e1a 100%);
+
+  /* Ombres */
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-glow-violet: 0 0 20px rgba(123, 104, 238, 0.35);
+  --shadow-glow-gold: 0 0 20px rgba(232, 160, 32, 0.35);
+
+  /* Rayons */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
 }
 
-/* ---- App background ---- */
+/* ── 2. FOND GLOBAL DE L'APPLICATION ──────────────────────────────────────── */
 .stApp {
-  background: radial-gradient(1200px 600px at 20% 0%, rgba(108,99,255,0.18), rgba(0,0,0,0) 60%),
-              radial-gradient(1000px 600px at 80% 30%, rgba(255,107,61,0.12), rgba(0,0,0,0) 55%),
-              var(--bg);
-  color: var(--text);
+  background-color: var(--void) !important;
+  color: var(--text-primary) !important;
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
 }
 
-/* ---- Main container spacing ---- */
-.block-container {
+/* Fond du bloc principal */
+.main .block-container {
+  background-color: var(--void) !important;
   padding-top: 2rem;
-  padding-bottom: 2rem;
 }
 
-/* ---- Sidebar ---- */
-section[data-testid="stSidebar"] > div {
-  background: var(--panel-2);
-  border-right: 1px solid rgba(255,255,255,0.06);
+/* ── 3. SIDEBAR ───────────────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+  background: var(--grad-dark) !important;
+  border-right: 1px solid var(--border) !important;
 }
 
-/* ---- Typography ---- */
-h1, h2, h3 {
-  letter-spacing: 0.2px;
-}
-p, label, span, div {
-  color: var(--text);
+[data-testid="stSidebar"]>div:first-child {
+  padding: 1.5rem 1rem;
 }
 
-/* ---- Cards-ish containers (columns, expanders, etc.) ---- */
-div[data-testid="stVerticalBlockBorderWrapper"] {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+/* Titre / logo dans la sidebar */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+  color: var(--text-primary) !important;
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  letter-spacing: 0.08em;
 }
 
-/* ---- Inputs (text, select, sliders) ---- */
-div[data-baseweb="input"] > div,
-div[data-baseweb="select"] > div,
-div[data-baseweb="textarea"] > div {
-  background: rgba(255,255,255,0.04) !important;
-  border-radius: 14px !important;
-  border: 1px solid rgba(255,255,255,0.10) !important;
-}
-
-/* slider track */
-div[data-testid="stSlider"] div[role="slider"] {
-  background-color: var(--accent) !important;
-  box-shadow: 0 0 0 6px rgba(255,107,61,0.15);
-}
-
-/* ---- Buttons ---- */
-.stButton > button {
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.05);
-  color: var(--text);
-  box-shadow: 0 8px 18px rgba(0,0,0,0.25);
-  transition: transform 0.08s ease, background 0.2s ease, border 0.2s ease;
-}
-
-.stButton > button:hover {
-  border: 1px solid rgba(255,107,61,0.55);
-  background: rgba(255,107,61,0.12);
-  transform: translateY(-1px);
-}
-
-.stButton > button:active {
-  transform: translateY(0px);
-}
-
-/* Primary button (Streamlit uses kind="primary") */
-.stButton > button[kind="primary"] {
-  background: linear-gradient(135deg, var(--accent), #FF8A63);
-  border: 0;
-  color: #111;
-  font-weight: 700;
-}
-
-/* ---- Dataframe ---- */
-div[data-testid="stDataFrame"] {
-  border-radius: var(--radius);
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.08);
-}
-
-/* Cache la navigation multipage native pour éviter le double menu */
-div[data-testid="stSidebarNav"] {
-  display: none;
-}
-
-/* ---- Expander ---- */
-details {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: var(--radius);
-  padding: 0.35rem 0.7rem;
-}
-
-/* ---- Reduce Streamlit default “chrome” ---- */
-header[data-testid="stHeader"] {
-  background: transparent;
-}
-footer { visibility: hidden; }
-
-.catalog-wrap{
-  display:grid;
-  grid-template-columns: 76px 1fr;
-  gap: 18px;
-}
-
-.side{
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 22px;
-  box-shadow: var(--shadow);
-  padding: 12px 10px;
-  height: calc(100vh - 140px);
-  position: sticky;
-  top: 80px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
+/* Liens de navigation sidebar (st.page_link) */
+[data-testid="stSidebar"] a {
+  display: flex;
+  align-items: center;
   gap: 10px;
-}
-
-.side-logo{
-  width: 46px; height: 46px;
-  border-radius: 16px;
-  display:flex; align-items:center; justify-content:center;
-  background: rgba(255,255,255,0.06);
-  margin-bottom: 6px;
-  font-size: 20px;
-}
-
-.side-item{
-  width: 46px; height: 46px;
-  border-radius: 16px;
-  display:flex; align-items:center; justify-content:center;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  color: var(--muted);
-}
-
-.side-item.active{
-  background: rgba(255,107,61,0.22);
-  border: 1px solid rgba(255,107,61,0.55);
-  color: #fff;
-}
-
-.catalog-title{
-  font-size: 34px;
-  font-weight: 800;
-}
-
-.catalog-avatar{
-  width: 44px; height: 44px;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.08);
-  display:flex; align-items:center; justify-content:center;
-}
-
-.movie-card{
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 18px;
-  overflow:hidden;
-  box-shadow: var(--shadow);
-}
-
-.movie-poster{
-  height: 220px;
-  background-size: cover;
-  background-position: center;
-}
-
-.movie-meta{
-  padding: 12px 12px 14px 12px;
-}
-
-.movie-title{
-  font-weight: 800;
-}
-
-.movie-sub{
-  color: var(--muted);
-  font-size: 13px;
-  margin-top: 4px;
-}
-
-.promo-card{
-  background: rgba(108,99,255,0.18);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 18px;
-  padding: 18px;
-  box-shadow: var(--shadow);
-}
-
-.promo-title{
-  font-size: 28px;
-  font-weight: 900;
-}
-
-.promo-sub{
-  color: var(--muted);
-  margin-bottom: 10px;
-}
-
-.promo-question{
-  margin-top: 10px;
-  font-weight: 700;
-}
-
-.promo-list{
-  margin: 10px 0 14px 18px;
-  color: var(--text);
-}
-
-.promo-cta{
-  display:inline-block;
   padding: 10px 14px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent), #FF8A63);
-  color: #111;
-  font-weight: 800;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary) !important;
+  font-size: 0.88rem;
+  font-weight: 400;
+  text-decoration: none !important;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  margin-bottom: 4px;
+}
+
+[data-testid="stSidebar"] a:hover {
+  background: var(--card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border);
+}
+
+[data-testid="stSidebar"] a[aria-current="page"] {
+  background: rgba(123, 104, 238, 0.18) !important;
+  color: var(--violet-light) !important;
+  border-color: rgba(123, 104, 238, 0.35) !important;
+  box-shadow: var(--shadow-glow-violet);
+  font-weight: 600;
+}
+
+/* Séparateur sidebar */
+[data-testid="stSidebar"] hr {
+  border-color: var(--border) !important;
+  margin: 1rem 0;
+}
+
+/* Texte générique sidebar */
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] label {
+  color: var(--text-secondary) !important;
+  font-size: 0.85rem;
+}
+
+/* ── 4. TOPBAR / EN-TÊTE PAGE ─────────────────────────────────────────────── */
+[data-testid="stHeader"] {
+  background: rgba(15, 14, 26, 0.85) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border) !important;
+}
+
+/* Titres de page */
+h1 {
+  font-family: 'Bebas Neue', 'Impact', sans-serif !important;
+  font-size: 2.4rem !important;
+  letter-spacing: 0.06em !important;
+  color: var(--text-primary) !important;
+  line-height: 1.1 !important;
+}
+
+h2 {
+  font-family: 'Bebas Neue', 'Impact', sans-serif !important;
+  font-size: 1.7rem !important;
+  letter-spacing: 0.07em !important;
+  color: var(--text-primary) !important;
+}
+
+h3 {
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: var(--text-primary) !important;
+}
+
+p,
+li,
+span {
+  color: var(--text-secondary);
+}
+
+/* Caption / sous-titres */
+[data-testid="stCaptionContainer"] p {
+  color: var(--text-muted) !important;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+/* ── 5. CARDS / CONTENEURS ────────────────────────────────────────────────── */
+
+/* Conteneur générique (st.container avec border=True) */
+[data-testid="stVerticalBlockBorderWrapper"] {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"]:hover {
+  border-color: var(--violet) !important;
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-glow-violet);
+}
+
+/* st.expander */
+[data-testid="stExpander"] {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+[data-testid="stExpander"]:hover {
+  border-color: var(--violet) !important;
+}
+
+[data-testid="stExpanderToggleIcon"] {
+  color: var(--violet-light) !important;
+}
+
+/* st.info / st.success / st.warning / st.error */
+[data-testid="stNotification"] {
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.stAlert {
+  border-radius: var(--radius-md) !important;
+}
+
+/* ── 6. BOUTONS ───────────────────────────────────────────────────────────── */
+
+/* Bouton primaire */
+.stButton>button[kind="primary"],
+.stButton>button {
+  background: var(--grad-violet) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: var(--radius-sm) !important;
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  padding: 0.55rem 1.4rem !important;
+  box-shadow: var(--shadow-glow-violet) !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer;
+}
+
+.stButton>button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 0 28px rgba(123, 104, 238, 0.55) !important;
+  filter: brightness(1.1);
+}
+
+.stButton>button:active {
+  transform: translateY(0) !important;
+}
+
+/* Bouton secondaire (st.button avec type="secondary") */
+.stButton>button[kind="secondary"] {
+  background: transparent !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: none !important;
+}
+
+.stButton>button[kind="secondary"]:hover {
+  border-color: var(--violet) !important;
+  color: var(--violet-light) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none;
+}
+
+/* Bouton danger (via st.button avec use_container_width) */
+.stButton>button[kind="tertiary"] {
+  background: rgba(192, 57, 43, 0.12) !important;
+  color: #e74c3c !important;
+  border: 1px solid rgba(192, 57, 43, 0.3) !important;
+  box-shadow: none !important;
+}
+
+.stButton>button[kind="tertiary"]:hover {
+  background: rgba(192, 57, 43, 0.22) !important;
+  transform: none !important;
+  filter: none;
+}
+
+/* Lien de navigation (st.page_link hors sidebar) */
+[data-testid="stPageLink"] a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary) !important;
+  font-size: 0.88rem;
+  text-decoration: none !important;
+  transition: all 0.2s ease;
+  margin-bottom: 8px;
+}
+
+[data-testid="stPageLink"] a:hover {
+  border-color: var(--violet);
+  color: var(--violet-light) !important;
+  background: var(--card);
+}
+
+/* ── 7. INPUTS / FORMULAIRES ─────────────────────────────────────────────── */
+
+/* Champ texte */
+.stTextInput>div>div>input,
+.stTextArea>div>div>textarea,
+.stNumberInput>div>div>input {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-primary) !important;
+  font-family: 'DM Sans', sans-serif !important;
+  padding: 0.6rem 1rem !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.stTextInput>div>div>input:focus,
+.stTextArea>div>div>textarea:focus,
+.stNumberInput>div>div>input:focus {
+  border-color: var(--violet) !important;
+  box-shadow: 0 0 0 3px rgba(123, 104, 238, 0.15) !important;
+  outline: none !important;
+}
+
+/* Placeholder */
+.stTextInput>div>div>input::placeholder,
+.stTextArea>div>div>textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* Select / Multiselect */
+.stSelectbox>div>div,
+.stMultiSelect>div>div {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-primary) !important;
+}
+
+.stSelectbox>div>div:focus-within,
+.stMultiSelect>div>div:focus-within {
+  border-color: var(--violet) !important;
+  box-shadow: 0 0 0 3px rgba(123, 104, 238, 0.15) !important;
+}
+
+/* Labels de formulaire */
+.stTextInput label,
+.stTextArea label,
+.stSelectbox label,
+.stMultiSelect label,
+.stSlider label,
+.stNumberInput label,
+.stCheckbox label {
+  color: var(--text-secondary) !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+/* Slider */
+.stSlider>div>div>div>div {
+  background: var(--grad-violet) !important;
+}
+
+.stSlider>div>div>div {
+  background: var(--border) !important;
+}
+
+/* Checkbox */
+.stCheckbox>label>div:first-child {
+  border-color: var(--border) !important;
+  background: var(--surface) !important;
+  border-radius: 4px !important;
+}
+
+.stCheckbox>label>div:first-child[data-checked="true"] {
+  background: var(--violet) !important;
+  border-color: var(--violet) !important;
+}
+
+/* ── 8. BADGES / TAGS ────────────────────────────────────────────────────── */
+
+/* Badge générique — injecté via st.markdown() */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 100px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.badge-gold {
+  background: rgba(232, 160, 32, 0.15);
+  color: var(--gold);
+  border: 1px solid rgba(232, 160, 32, 0.3);
+}
+
+.badge-violet {
+  background: rgba(123, 104, 238, 0.15);
+  color: var(--violet-light);
+  border: 1px solid rgba(123, 104, 238, 0.3);
+}
+
+.badge-electric {
+  background: rgba(79, 172, 254, 0.12);
+  color: var(--electric);
+  border: 1px solid rgba(79, 172, 254, 0.25);
+}
+
+.badge-danger {
+  background: rgba(192, 57, 43, 0.12);
+  color: #e74c3c;
+  border: 1px solid rgba(192, 57, 43, 0.25);
+}
+
+.badge-success {
+  background: rgba(46, 204, 113, 0.12);
+  color: var(--success);
+  border: 1px solid rgba(46, 204, 113, 0.25);
+}
+
+/* ── 9. BARRES DE PROGRESSION ────────────────────────────────────────────── */
+
+/* st.progress natif */
+.stProgress>div>div>div {
+  background: var(--border) !important;
+  border-radius: 10px !important;
+  height: 5px !important;
+}
+
+.stProgress>div>div>div>div {
+  background: var(--grad-gold) !important;
+  border-radius: 10px !important;
+  transition: width 0.4s ease;
+}
+
+/* Barre de progression custom (via st.markdown) */
+.progress-bar-wrap {
+  height: 4px;
+  background: var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 10px;
+  background: var(--grad-gold);
+  transition: width 0.4s ease;
+}
+
+.progress-bar-fill.violet {
+  background: var(--grad-violet);
+}
+
+/* ── 10. MÉTRIQUES (st.metric) ───────────────────────────────────────────── */
+[data-testid="stMetric"] {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  padding: 1.2rem 1.4rem !important;
+  box-shadow: var(--shadow-card);
+}
+
+[data-testid="stMetricLabel"] {
+  color: var(--text-muted) !important;
+  font-size: 0.72rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.15em !important;
+}
+
+[data-testid="stMetricValue"] {
+  color: var(--text-primary) !important;
+  font-family: 'Bebas Neue', 'Impact', sans-serif !important;
+  font-size: 2.2rem !important;
+  letter-spacing: 0.04em !important;
+}
+
+[data-testid="stMetricDelta"] {
+  font-size: 0.78rem !important;
+}
+
+/* ── 11. DATAFRAME / TABLE ───────────────────────────────────────────────── */
+[data-testid="stDataFrame"],
+.stDataFrame {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  overflow: hidden;
+}
+
+/* ── 12. TABS (st.tabs) ──────────────────────────────────────────────────── */
+[data-testid="stTabs"]>div:first-child {
+  border-bottom: 1px solid var(--border) !important;
+  gap: 4px;
+}
+
+button[data-baseweb="tab"] {
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  border-bottom: 2px solid transparent !important;
+  font-family: 'DM Sans', sans-serif !important;
+  font-size: 0.88rem !important;
+  padding: 10px 20px !important;
+  transition: all 0.2s;
+}
+
+button[data-baseweb="tab"]:hover {
+  color: var(--text-secondary) !important;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+  color: var(--violet-light) !important;
+  border-bottom-color: var(--violet) !important;
+  font-weight: 600 !important;
+}
+
+[data-baseweb="tab-highlight"] {
+  background: var(--violet) !important;
+}
+
+/* Contenu des onglets */
+[data-testid="stTabsContent"] {
+  background: var(--void) !important;
+  padding-top: 1.5rem;
+}
+
+/* ── 13. DIVIDERS ────────────────────────────────────────────────────────── */
+hr {
+  border: none !important;
+  border-top: 1px solid var(--border) !important;
+  margin: 1.5rem 0 !important;
+}
+
+/* ── 14. SCROLLBAR ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--void);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--violet);
+}
+
+/* ── 15. SPINNER / LOADING ───────────────────────────────────────────────── */
+.stSpinner>div {
+  border-top-color: var(--violet) !important;
+}
+
+/* ── 16. TOAST / NOTIFICATIONS ───────────────────────────────────────────── */
+[data-testid="stToast"] {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-card);
+}
+
+/* ── 17. COMPOSANTS CUSTOM (via st.markdown html) ────────────────────────── */
+
+/* Carte film */
+.film-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  height: 100%;
+}
+
+.film-card:hover {
+  border-color: var(--violet);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow-violet);
+}
+
+.film-card-title {
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.film-card-meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.film-card-rating {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+/* Hero banner */
+.hero-banner {
+  background: linear-gradient(135deg, #1a1835 0%, #2a1850 40%, #101830 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 2.5rem 3rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-banner::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(123, 104, 238, 0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hero-eyebrow {
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 18px;
+  height: 1px;
+  background: var(--gold);
+}
+
+.hero-title {
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  font-size: 3.2rem;
+  line-height: 0.95;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.hero-title .accent {
+  background: linear-gradient(135deg, #7b68ee, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-desc {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  font-style: italic;
+  max-width: 420px;
+}
+
+/* Info card (Espace client) */
+.info-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.4rem 1.6rem;
+}
+
+.info-card-title {
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  color: var(--text-muted);
+}
+
+.info-value {
+  color: var(--text-primary);
+}
+
+.info-value.highlight {
+  color: var(--violet-light);
+}
+
+/* Reco item */
+.reco-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 10px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.reco-item:hover {
+  border-color: var(--violet);
+  background: var(--card-hover);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-glow-violet);
+}
+
+.reco-rank {
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  font-size: 1.8rem;
+  color: var(--border);
+  min-width: 28px;
+  letter-spacing: 0.04em;
+}
+
+.reco-rank.top {
+  color: var(--gold);
+}
+
+.reco-title {
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+}
+
+[data-testid="stSidebarNav"] {
+  display: none !important;
+}
+
+/* Masquer le caption de tri */
+[data-testid="stCaptionContainer"] {
+  display: none !important;
 }
