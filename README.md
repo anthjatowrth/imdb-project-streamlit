@@ -112,7 +112,7 @@ design personnalisé avec CSS
 ---
 📁 Structure du projet
 ---
-
+```text
 imdb-project-streamlit/
 │
 ├── app.py                     # Entrée principale Streamlit
@@ -141,7 +141,7 @@ imdb-project-streamlit/
 ├── docs/
 ├── requirements.txt
 └── README.md
-
+```
 ---
 ⚙️ Pipeline de traitement des données
 ---
