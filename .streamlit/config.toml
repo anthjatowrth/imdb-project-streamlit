@@ -15,6 +15,5 @@ textColor = "#e8f5e9"
 # Font globale (équivalent DM Sans)
 font = "sans serif"
 
-
 [server]
 runOnSave = true
