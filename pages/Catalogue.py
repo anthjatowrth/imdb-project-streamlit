@@ -5,13 +5,13 @@ import pandas as pd
 import streamlit as st
 
 from src.config import OUTPUT_DIR
-from src.utils import load_css, normalize_txt, read_csv_clean_columns, resolve_poster_url
+from src.utils import load_css, normalize_txt, read_csv_clean_columns, resolve_poster_url, format_votes, format_duration, format_countries_fr
 
 st.set_page_config(page_title="Catalogue", layout="wide")
 
 if "go_to_title" in st.session_state:
     title = st.session_state.pop("go_to_title")
-    st.switch_page("pages/Film_details.py")  # va sur la page
+    st.switch_page("pages/Film_details.py")
 
 load_css()
 render_sidebar()
@@ -19,9 +19,8 @@ render_sidebar()
 st.title("📚 Catalogue des films")
 st.caption("Filtre le catalogue. Résultats triés par Popularité ↓, Note ↓, Votes ↓. Affichage paginé par 20.")
 
-
 CSV_PATH = OUTPUT_DIR / "10_final_imdb_tmdb.csv"
-PAGE_SIZE = 20
+PAGE_SIZE = 30
 
 POPULARITY_MAP = {
     "faible notoriété": 1,
@@ -30,8 +29,6 @@ POPULARITY_MAP = {
     "très populaire": 4,
 }
 
-
-# ---------- Utils locaux (courts) ----------
 def split_csv_list(s: object) -> list[str]:
     if s is None or (isinstance(s, float) and np.isnan(s)):
         return []
@@ -40,12 +37,10 @@ def split_csv_list(s: object) -> list[str]:
         return []
     return [normalize_txt(x, collapse_spaces=True) for x in s.split(",") if str(x).strip()]
 
-
 def coerce_num(df: pd.DataFrame, col: str, default: float) -> None:
     if col not in df.columns:
         df[col] = default
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(default)
-
 
 def rank_base(d: pd.DataFrame) -> pd.DataFrame:
     return d.sort_values(
@@ -54,28 +49,23 @@ def rank_base(d: pd.DataFrame) -> pd.DataFrame:
         kind="mergesort",
     )
 
-
-# ---------- Chargement + préparation (cachés) ----------
 @st.cache_data(show_spinner=False)
 def load_df(path: str) -> pd.DataFrame:
     return read_csv_clean_columns(path)
-
 
 @st.cache_data(show_spinner=False)
 def prepare_df(path: str) -> pd.DataFrame:
     df = load_df(path)
 
-    # colonnes attendues
-    for c in ["Titre", "Genre", "Réalisateurs", "Casting", "Pays_origine", "Poster1", "Poster2", "Accroche", "Résumé"]:
+    for c in ["Titre", "Genre", "Réalisateurs", "Casting", "Pays_origine", "Poster1", "Poster2", "Accroche", "Résumé", "Popularité"]:
         if c not in df.columns:
             df[c] = ""
 
-    # numériques
     coerce_num(df, "Année_de_sortie", 0)
     df["Année_de_sortie"] = df["Année_de_sortie"].astype(int, errors="ignore")
     coerce_num(df, "Note_moyenne", np.nan)
     coerce_num(df, "Nombre_votes", 0)
-    # Popularité parfois texte => score
+
     df["_pop_score"] = (
         df["Popularité"]
         .astype(str)
@@ -85,14 +75,12 @@ def prepare_df(path: str) -> pd.DataFrame:
         .astype(int)
     )
 
-    # normalisations pour filtres rapides
     df["_genre_list"] = df["Genre"].apply(split_csv_list)
     df["_dir_n"] = df["Réalisateurs"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
     df["_cast_n"] = df["Casting"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
     df["_country_n"] = df["Pays_origine"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
 
     return rank_base(df)
-
 
 @st.cache_data(show_spinner=False)
 def build_title_index(df: pd.DataFrame) -> pd.DataFrame:
@@ -105,7 +93,6 @@ def build_title_index(df: pd.DataFrame) -> pd.DataFrame:
     tmp["director"] = tmp["Réalisateurs"].fillna("").astype(str).str.strip()
     tmp["key"] = tmp["title"].map(lambda x: normalize_txt(x, collapse_spaces=True))
 
-    # garde une seule ligne par titre (celle la plus informative)
     tmp["dir_len"] = tmp["director"].str.len()
     tmp = (
         tmp.sort_values(["title", "year", "dir_len"], ascending=[True, False, False])
@@ -113,7 +100,6 @@ def build_title_index(df: pd.DataFrame) -> pd.DataFrame:
            .reset_index(drop=True)
     )
     return tmp[["title", "year", "director", "key"]]
-
 
 def get_suggestions(title_index: pd.DataFrame, typed: str, limit: int = 10) -> pd.DataFrame:
     q = normalize_txt(typed, collapse_spaces=True)
@@ -128,12 +114,8 @@ def get_suggestions(title_index: pd.DataFrame, typed: str, limit: int = 10) -> p
     contains = title_index[keys.str.contains(q, na=False)]
     return pd.concat([starts, contains]).drop_duplicates("title").head(limit)
 
-
-
 df_ranked = prepare_df(str(CSV_PATH))
-
 title_index = build_title_index(df_ranked)
-
 
 st.sidebar.header("Filtres")
 
@@ -164,13 +146,13 @@ if st.sidebar.button("Réinitialiser les filtres"):
         st.session_state.pop(k, None)
     st.rerun()
 
-
-
 mask = pd.Series(True, index=df_ranked.index)
 
 if genre_choice:
     chosen = [normalize_txt(g, collapse_spaces=True) for g in genre_choice]
     mask &= df_ranked["_genre_list"].apply(lambda lst: any(g in lst for g in chosen))
+
+    sug_df = get_suggestions(title_index, typed, limit=10)
 
 if country_choice:
     chosen_c = [normalize_txt(c, collapse_spaces=True) for c in country_choice]
@@ -195,7 +177,6 @@ if pop_choice != "Tous":
 
 filtered = df_ranked.loc[mask]
 total = len(filtered)
-
 
 st.session_state.setdefault("cat_page", 0)
 max_pages = max(0, (total - 1) // PAGE_SIZE)
@@ -260,8 +241,6 @@ start = st.session_state.cat_page * PAGE_SIZE
 end = min(start + PAGE_SIZE, total)
 page_df = filtered.iloc[start:end]
 
-
-# ---------- Rendering grid ----------
 def render_grid(d: pd.DataFrame, n_cols: int = 4) -> None:
     rows = d.to_dict("records")
     for i in range(0, len(rows), n_cols):
@@ -277,21 +256,44 @@ def render_grid(d: pd.DataFrame, n_cols: int = 4) -> None:
                 directors = row.get("Réalisateurs", "")
                 country = row.get("Pays_origine", "")
                 tagline = row.get("Accroche", "")
-                summary = row.get("Résumé", "")
 
                 poster_raw = row.get("Poster1", "") or row.get("Poster2", "")
                 poster_url = resolve_poster_url(poster_raw)
 
-                with st.container(border=200):
+                with st.container(border=True):
                     if poster_url:
-                        st.image(poster_url, use_container_width=140)
+                        st.image(poster_url, use_container_width=True, output_format="JPEG", caption=None)
+                        st.markdown(
+                            """
+                            <style>
+                            [data-testid="stImage"] img{
+                                height: 220px;
+                                object-fit: cover;
+                                width: 100%;
+                                border-radius: 6px;
+                            }
+                            </style>
+                            """,
+                            unsafe_allow_html=True,)
                     else:
                         st.caption("🖼️ (pas d'affiche)")
 
-                    st.markdown(f"**{title}**")
-                    st.caption(
-                        f"{year} · ⭐ {rating if pd.notna(rating) else '—'} · 🗳️ {int(votes):,} · 🔥 {pop_label}"
-                    )
+                    votes_txt = format_votes(votes)
+                    rating_txt = f"{rating:.1f}" if pd.notna(rating) else "—"
+                    year_txt = str(int(year)) if pd.notna(year) and str(year).strip() != "" else "—"
+                    pop_txt = pop_label if str(pop_label).strip() else "—"
+
+                    st.markdown(
+                        f"""
+                        <div style='font-size:16px;font-weight:600;height:40px;white-space:nowrap;overflow:hidden;text-align:center;text-overflow:ellipsis'>{title}</div>
+                        <div style="font-size:13px;opacity:0.75;line-height:1.5;margin-top:6px;text-align:center;">
+                                {year_txt}<br>
+                            ⭐ {rating_txt}<br>
+                            🗳️ {votes_txt}<br>
+                            🔥 {pop_txt}
+                        </div>
+                        """,
+                        unsafe_allow_html=True)
 
                     if genre:
                         st.caption(f"Genre : {genre}")
@@ -303,22 +305,10 @@ def render_grid(d: pd.DataFrame, n_cols: int = 4) -> None:
                     if isinstance(tagline, str) and tagline.strip():
                         st.caption(f"“{tagline}”")
 
-                    # if isinstance(summary, str) and summary.strip():
-                    #     with st.expander("Résumé"):
-                    #         st.write(summary)
-
                     st.page_link(
                         "pages/Film_details.py",
                         label="Voir la fiche",
                         query_params={"title": title},
                     )
 
-render_grid(page_df, n_cols=8)
-
-# with st.expander("Voir le tableau (debug)"):
-#     show_cols = [
-#         "ID", "Titre", "Année_de_sortie", "Genre", "Note_moyenne",
-#         "Nombre_votes", "Popularité", "Réalisateurs", "Casting", "Pays_origine"
-#     ]
-#     show_cols = [c for c in show_cols if c in filtered.columns]
-#     st.dataframe(filtered[show_cols].iloc[start:end], use_container_width=True)
+render_grid(page_df, n_cols=6)
