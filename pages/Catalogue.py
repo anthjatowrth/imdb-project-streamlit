@@ -17,137 +17,6 @@ if "go_to_title" in st.session_state:
 load_css()
 render_sidebar()
 
-st.markdown(
-    """
-    <style>
-    .card-wrap{
-      position: relative;
-      width: 100%;
-      aspect-ratio: 2 / 3;
-      border-radius: 18px;
-      overflow: hidden;
-      background: rgba(10,10,16,0.25);
-      border: 1px solid rgba(255,255,255,0.14);
-      box-shadow: 0 16px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
-      transform: translateZ(0);
-      transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
-    }
-
-    .card-wrap:hover{
-      transform: translateY(-2px);
-      border-color: rgba(255,255,255,0.22);
-      box-shadow: 0 22px 52px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.08);
-    }
-
-    .movie-card{
-      position: absolute;
-      inset: 0;
-      border-radius: 18px;
-      overflow: hidden;
-      background-image: var(--poster);
-      background-repeat: no-repeat;
-      background-size: cover;
-      background-position: center;
-      transform: translateZ(0);
-      transition: transform 180ms ease, filter 180ms ease;
-      filter: saturate(0.98) contrast(1.03);
-    }
-
-    .card-wrap:hover .movie-card{
-      transform: scale(1.015);
-      filter: saturate(1.05) contrast(1.07);
-    }
-
-    .movie-card::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background: radial-gradient(120% 120% at 50% 0%,
-                rgba(255,255,255,0.08) 0%,
-                rgba(0,0,0,0.20) 55%,
-                rgba(0,0,0,0.60) 100%);
-      pointer-events:none;
-    }
-
-    .movie-meta{
-      position:absolute;
-      left:0; right:0; bottom:0;
-      padding: 14px 14px 12px 14px;
-      background: linear-gradient(180deg,
-                rgba(0,0,0,0.00) 0%,
-                rgba(0,0,0,0.55) 35%,
-                rgba(0,0,0,0.85) 100%);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      pointer-events:none;
-    }
-
-    .movie-title{
-      font-size: 1.06rem;
-      font-weight: 750;
-      line-height: 1.15;
-      margin: 0 0 6px 0;
-      color: rgba(255,255,255,0.95);
-      text-shadow: 0 6px 18px rgba(0,0,0,0.55);
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .movie-sub{
-      font-size: 0.90rem;
-      font-weight: 650;
-      color: rgba(255,255,255,0.78);
-      margin: 0;
-      text-shadow: 0 6px 18px rgba(0,0,0,0.50);
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items:center;
-    }
-
-    .dot{ opacity: 0.65; }
-
-    .movie-cta{
-      position:absolute;
-      inset:0;
-      display:grid;
-      place-items:center;
-      opacity:0;
-      transition: opacity 160ms ease;
-      pointer-events:none;
-    }
-    .card-wrap:hover .movie-cta{ opacity:1; }
-
-    .movie-cta a{
-      pointer-events:auto;
-      padding: 10px 16px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.20);
-      background: rgba(10,10,16,0.45);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      color: rgba(255,255,255,0.92) !important;
-      font-weight: 800;
-      letter-spacing: 0.2px;
-      box-shadow: 0 18px 38px rgba(0,0,0,0.40);
-      text-decoration: none !important;
-      transform: translateY(0);
-      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
-    }
-    .movie-cta a:hover{
-      transform: translateY(-1px);
-      background: rgba(10,10,16,0.60);
-      border-color: rgba(255,255,255,0.34);
-    }
-
-    div[data-testid="column"] > div{ gap: 0.35rem; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
 st.title("📚 Catalogue des films")
 st.caption("Filtre le catalogue. Résultats triés par Popularité ↓, Note ↓, Votes ↓. Affichage paginé par 24.")
 
@@ -195,34 +64,22 @@ def prepare_df(path: str) -> pd.DataFrame:
     df = load_df(path)
 
     for c in [
-        "ID",
-        "Titre",
-        "Genre",
-        "Réalisateurs",
-        "Casting",
-        "Pays_origine",
-        "Poster1",
-        "Poster2",
-        "Accroche",
-        "Résumé",
-        "Popularité",
+        "ID", "Titre", "Genre", "Réalisateurs", "Casting",
+        "Pays_origine", "Poster1", "Poster2", "Accroche", "Résumé", "Popularité",
     ]:
         if c not in df.columns:
             df[c] = ""
 
     coerce_num(df, "Année_de_sortie", 0)
     df["Année_de_sortie"] = pd.to_numeric(df["Année_de_sortie"], errors="coerce").fillna(0).astype(int)
-
     coerce_num(df, "Note_moyenne", np.nan)
     coerce_num(df, "Nombre_votes", 0)
 
     df["_pop_score"] = df["Popularité"].astype(str).str.lower().map(POPULARITY_MAP).fillna(0).astype(int)
-
     df["_genre_list"] = df["Genre"].apply(split_csv_list)
     df["_dir_n"] = df["Réalisateurs"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
     df["_cast_n"] = df["Casting"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
     df["_country_n"] = df["Pays_origine"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
-
     df["_title_raw"] = df["Titre"].fillna("").astype(str).str.strip()
     df["_title_n"] = df["_title_raw"].map(lambda x: normalize_txt(x, collapse_spaces=True))
 
@@ -246,7 +103,6 @@ def _search_rank(df: pd.DataFrame, typed: str) -> pd.Series:
         return pd.Series(0, index=df.index, dtype="int64")
 
     t = df["_title_n"]
-
     exact = (t == q).astype("int64") * 1_000_000
     starts = t.str.startswith(q, na=False).astype("int64") * 100_000
     contains = t.str.contains(q, na=False).astype("int64") * 10_000
@@ -260,24 +116,106 @@ def _search_rank(df: pd.DataFrame, typed: str) -> pd.Series:
     return exact + starts + contains + token_score
 
 
+def render_pagination(current_page: int, max_pages: int, key_suffix: str) -> None:
+    """Affiche la barre de pagination avec boutons gauche/droite et info centrale."""
+    is_first = current_page == 0
+    is_last = current_page >= max_pages
+
+    st.markdown(
+        f"""
+        <div class="pagination-bar">
+            <div class="pagination-info">
+                Page {current_page + 1} / {max_pages + 1}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    left, center, right = st.columns([1, 4, 1])
+
+    with left:
+        if not is_first:
+            if st.button("← Précédent", key=f"prev_{key_suffix}", use_container_width=True):
+                st.session_state.cat_page -= 1
+                st.rerun()
+
+    with center:
+        pass
+
+    with right:
+        if not is_last:
+            if st.button("Suivant →", key=f"next_{key_suffix}", use_container_width=True):
+                st.session_state.cat_page += 1
+                st.rerun()
+
+
+def render_grid(d: pd.DataFrame, n_cols: int = 6) -> None:
+    rows = d.to_dict("records")
+
+    for i in range(0, len(rows), n_cols):
+        st.markdown('<div class="catalogue-grid-row">', unsafe_allow_html=True)
+        cols = st.columns(n_cols, vertical_alignment="top")
+
+        for col, row in zip(cols, rows[i : i + n_cols]):
+            with col:
+                title = row.get("Titre", "—")
+                year = row.get("Année_de_sortie", "—")
+                rating = row.get("Note_moyenne", np.nan)
+                votes = row.get("Nombre_votes", 0)
+
+                poster_raw = row.get("Poster1", "") or row.get("Poster2", "")
+                poster_url = resolve_poster_url(poster_raw)
+                if not poster_url:
+                    poster_url = "https://via.placeholder.com/500x750?text=No+Poster"
+
+                t = _safe_text(title)
+                y = _safe_text(year)
+                r = f"{float(rating):.1f}" if pd.notna(rating) else "—"
+                v = f"{int(votes):,}".replace(",", " ")
+                href = f"Film_details?id={row['ID']}"
+
+                st.markdown(
+                    f"""
+                    <div class="card-wrap">
+                      <div class="movie-card" style="--poster:url('{poster_url}')">
+                        <div class="movie-cta">
+                          <a href="{href}">Voir la fiche</a>
+                        </div>
+                        <div class="movie-meta">
+                          <div class="movie-title">{t}</div>
+                          <div class="movie-sub">
+                            <span>{y}</span>
+                            <span class="dot">•</span>
+                            <span>⭐ {r}</span>
+                            <span class="dot">•</span>
+                            <span>🗳️ {v}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ── Filtres sidebar ───────────────────────────────────────────────────────────
 df_ranked = prepare_df(str(CSV_PATH))
 
 st.sidebar.header("Filtres")
 
 all_genres = sorted({g for lst in df_ranked["_genre_list"] for g in lst if g})
 genre_choice = st.sidebar.multiselect(
-    "Genre",
-    options=all_genres,
-    default=[],
+    "Genre", options=all_genres, default=[],
     help="Un film est gardé s'il contient au moins un des genres sélectionnés.",
     placeholder="Choisissez un ou plusieurs genres",
 )
 
 countries = sorted({x for x in df_ranked["_country_n"].unique().tolist() if x})
 country_choice = st.sidebar.multiselect(
-    "Origine (Pays)",
-    options=countries,
-    default=[],
+    "Origine (Pays)", options=countries, default=[],
     placeholder="Choisissez un pays d'origine",
 )
 
@@ -297,6 +235,7 @@ if st.sidebar.button("Réinitialiser les filtres"):
         st.session_state.pop(k, None)
     st.rerun()
 
+# ── Filtrage ──────────────────────────────────────────────────────────────────
 mask = pd.Series(True, index=df_ranked.index)
 
 if genre_choice:
@@ -326,11 +265,11 @@ if pop_choice != "Tous":
 
 filtered = df_ranked.loc[mask]
 
+# ── Recherche par titre ───────────────────────────────────────────────────────
 st.markdown("### 🔎 Rechercher un film")
 
 typed = st.text_input(
-    "Recherche dans le titre",
-    key="q_title",
+    "Recherche dans le titre", key="q_title",
     placeholder="Ex: avatar, seigneur, dark knight...",
 ).strip()
 
@@ -352,87 +291,30 @@ else:
         kind="mergesort",
     )
 
+# ── Pagination ────────────────────────────────────────────────────────────────
 total = len(filtered)
-
-st.session_state.setdefault("cat_page", 0)
-max_pages = max(0, (total - 1) // PAGE_SIZE)
-st.session_state.cat_page = min(st.session_state.cat_page, max_pages)
-
-c1, c2, c3 = st.columns([1, 1, 3], vertical_alignment="center")
-with c1:
-    if st.button("⬅️ Précédent", disabled=st.session_state.cat_page == 0):
-        st.session_state.cat_page -= 1
-        st.rerun()
-with c2:
-    if st.button("Suivant ➡️", disabled=st.session_state.cat_page >= max_pages):
-        st.session_state.cat_page += 1
-        st.rerun()
-with c3:
-    if total == 0:
-        st.caption("0 film(s)")
-    else:
-        start = st.session_state.cat_page * PAGE_SIZE
-        end = min(start + PAGE_SIZE, total)
-        st.caption(
-            f"{total} film(s) — page {st.session_state.cat_page + 1} / {max_pages + 1} — affichage {start + 1} → {end}"
-        )
 
 if total == 0:
     st.warning("Aucun film ne correspond aux filtres.")
     st.stop()
 
+st.session_state.setdefault("cat_page", 0)
+max_pages = max(0, (total - 1) // PAGE_SIZE)
+st.session_state.cat_page = min(st.session_state.cat_page, max_pages)
+
 start = st.session_state.cat_page * PAGE_SIZE
 end = min(start + PAGE_SIZE, total)
 page_df = filtered.iloc[start:end]
 
+# Barre de pagination — haut
+render_pagination(st.session_state.cat_page, max_pages, key_suffix="top")
 
-def render_grid(d: pd.DataFrame, n_cols: int = 6) -> None:
-    rows = d.to_dict("records")
+st.divider()
 
-    for i in range(0, len(rows), n_cols):
-        cols = st.columns(n_cols, vertical_alignment="top")
-
-        for col, row in zip(cols, rows[i : i + n_cols]):
-            with col:
-                title = row.get("Titre", "—")
-                year = row.get("Année_de_sortie", "—")
-                rating = row.get("Note_moyenne", np.nan)
-                votes = row.get("Nombre_votes", 0)
-
-                poster_raw = row.get("Poster1", "") or row.get("Poster2", "")
-                poster_url = resolve_poster_url(poster_raw)
-                if not poster_url:
-                    poster_url = "https://via.placeholder.com/500x750?text=No+Poster"
-
-                t = _safe_text(title)
-                y = _safe_text(year)
-                r = f"{float(rating):.1f}" if pd.notna(rating) else "—"
-                v = f"{int(votes):,}".replace(",", " ")
-
-                href = f"Film_details?id={row['ID']}"
-
-                st.markdown(
-                    f"""
-                    <div class="card-wrap">
-                      <div class="movie-card" style="--poster:url('{poster_url}')">
-                        <div class="movie-cta">
-                          <a href="{href}">Voir la fiche</a>
-                        </div>
-                        <div class="movie-meta">
-                          <div class="movie-title">{t}</div>
-                          <div class="movie-sub">
-                            <span>{y}</span>
-                            <span class="dot">•</span>
-                            <span>⭐ {r}</span>
-                            <span class="dot">•</span>
-                            <span>🗳️ {v}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-
+# Grille de films
 render_grid(page_df, n_cols=6)
+
+st.divider()
+
+# Barre de pagination — bas
+render_pagination(st.session_state.cat_page, max_pages, key_suffix="bottom")
