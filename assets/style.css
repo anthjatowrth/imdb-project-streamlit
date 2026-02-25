@@ -148,9 +148,11 @@ section[data-testid="stSidebar"] > div {
 section[data-testid="stSidebar"] div[data-testid="stButton"] > button {
   width: 100%;
   padding: 1.05rem 1.15rem;
-  font-size: 1.15rem;
-  font-weight: 650;
-  letter-spacing: 0.2px;
+  font-family: 'Bebas Neue', 'Impact', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+
   border-radius: 0.90rem;
   border: 1px solid rgba(255,255,255,0.10);
   background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
@@ -276,7 +278,7 @@ p, li, span {
 }
 
 /* ── 5. CARDS / CONTENEURS ────────────────────────────────────────────────── */
-/* [data-testid="stVerticalBlockBorderWrapper"] {
+[data-testid="stVerticalBlockBorderWrapper"] {
   background: var(--card) !important;
   border: 2px solid rgba(255,255,255,0.35) !important;
   border-radius: var(--radius-lg) !important;
@@ -308,7 +310,7 @@ p, li, span {
 .stAlert {
   border-radius: var(--radius-md) !important;
   border: 1px solid var(--border) !important;
-} */
+}
 
 /* ── 6. BOUTONS ───────────────────────────────────────────────────────────── */
 .stButton > button[kind="primary"],

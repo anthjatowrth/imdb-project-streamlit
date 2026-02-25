@@ -284,7 +284,7 @@ def pick_poster_url(
 
 def load_css(
     css_path: str = "assets/style.css",
-    bg_path: str = "assets/fond.png",
+    bg_path: str = "assets/fond2.png",
 ) -> None:
     try:
         import streamlit as st

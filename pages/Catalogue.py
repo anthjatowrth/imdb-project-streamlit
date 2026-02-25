@@ -6,7 +6,7 @@ import streamlit as st
 
 from src.ui import render_sidebar
 from src.config import OUTPUT_DIR
-from src.utils import load_css, normalize_txt, read_csv_clean_columns, resolve_poster_url
+from src.utils import load_css, normalize_txt, read_csv_clean_columns, pick_poster_url
 
 st.set_page_config(page_title="Catalogue", layout="wide")
 
@@ -164,8 +164,7 @@ def render_grid(d: pd.DataFrame, n_cols: int = 6) -> None:
                 rating = row.get("Note_moyenne", np.nan)
                 votes = row.get("Nombre_votes", 0)
 
-                poster_raw = row.get("Poster1", "") or row.get("Poster2", "")
-                poster_url = resolve_poster_url(poster_raw)
+                poster_url = pick_poster_url(pd.Series(row), cols=("Poster1", "Poster2"), imdb_col="ID")
                 if not poster_url:
                     poster_url = "https://via.placeholder.com/500x750?text=No+Poster"
 
