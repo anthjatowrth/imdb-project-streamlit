@@ -9,17 +9,9 @@ from scipy.sparse import csr_matrix, hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler, normalize
+from src.utils import parse_simple_list
 
 GATED_COLS: tuple[str, ...] = ("is_animation", "is_documentary", "is_horror")
-
-
-def parse_simple(x: Any) -> list[str]:
-    if isinstance(x, list):
-        return [str(v).strip() for v in x if str(v).strip()]
-    s = str(x).strip()
-    s = s.replace("[", "").replace("]", "")
-    parts = [p.strip().strip("'").strip('"') for p in s.split(",")]
-    return [p for p in parts if p]
 
 
 def clean_txt(x: Any) -> str:
@@ -129,9 +121,9 @@ def build_artifacts(
     X_dir = tfidf_dir.fit_transform(df["txt_director"])
 
 
-    df["genres_list"] = df["Genre"].apply(parse_simple)
-    df["countries_list"] = df["Pays_origine"].apply(parse_simple)
-    df["pop_list"] = df["Popularité"].apply(parse_simple)
+    df["genres_list"] = df["Genre"].apply(parse_simple_list)
+    df["countries_list"] = df["Pays_origine"].apply(parse_simple_list)
+    df["pop_list"] = df["Popularité"].apply(parse_simple_list)
 
     _add_gated_flags(df)
 

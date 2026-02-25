@@ -72,10 +72,6 @@ def _fmt_votes(v: Any) -> str:
 
 @st.cache_data(show_spinner=False)
 def build_select_index(df_: pd.DataFrame) -> list[dict]:
-    """
-    Construit une liste d'options pour le selectbox.
-    Tri par popularité (votes desc) puis année desc.
-    """
     tmp = df_[["ID", "Titre", "Année_de_sortie", "Réalisateurs", "Nombre_votes"]].copy()
 
     tmp["title"] = tmp["Titre"].astype(str).str.strip()
@@ -188,7 +184,7 @@ col1, col2, col3 = st.columns([2.2, 1.2, 1.2], vertical_alignment="top")
 
 with col1:
     def fmt(o: dict) -> str:
-        return f"{o['title']} ({o['year']}) — {o['director'] or '—'} • {_fmt_votes(o.get('votes', 0))} votes"
+        return f"{o['title']} ({o['year']}) — {o['director'] or '—'}"
 
     chosen = st.selectbox(
         "Film de référence (recherche intégrée)",
