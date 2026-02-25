@@ -117,19 +117,15 @@ def resolve_poster_url(
     if not s or s.lower() == "nan":
         return None
 
-    # URL complète
     if s.startswith(("http://", "https://")):
         return s
 
-    # URL protocole relatif
     if s.startswith("//"):
         return "https:" + s
 
-    # Path TMDB
     if s.startswith("/"):
         return tmdb_base + s
 
-    # Fichier local
     if allow_local and Path(s).exists():
         return s
 
