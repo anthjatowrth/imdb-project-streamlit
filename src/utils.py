@@ -10,6 +10,8 @@ import pandas as pd
 
 from deep_translator import GoogleTranslator
 from functools import lru_cache
+import pycountry
+from babel import Locale
 
 def clean_id_series(s: pd.Series) -> pd.Series:
     return s.astype("string").str.strip()
@@ -177,3 +179,36 @@ def format_votes(n: int | float | None, decimals: int = 1) -> str:
         return f"{value:.{decimals}f} k".replace(".", ",")
     else:
         return str(int(n))
+    
+
+def format_duration(minutes: int | float) -> str:
+    hours = int(minutes) // 60
+    mins = int(minutes) % 60
+
+    if hours and mins:
+        return f"{hours} h {mins} min"
+    elif hours:
+        return f"{hours} h"
+    else:
+        return f"{mins} min"
+
+
+def format_countries_fr(codes: list[str] | None) -> str:
+    if not codes:
+        return "—"
+    loc = Locale.parse("fr")
+    names = []
+    for code in codes:
+        if not code:
+            continue
+        c = str(code).strip().upper()
+
+        country = (
+            pycountry.countries.get(alpha_2=c)
+            or pycountry.countries.get(alpha_3=c))
+        if country:
+            name = loc.territories.get(country.alpha_2, country.name)
+        else:
+            name = c
+        names.append(name)
+    return ", ".join(names) if names else "—"
