@@ -284,7 +284,7 @@ def render_grid(d: pd.DataFrame, n_cols: int = 4) -> None:
 
                 with st.container(border=200):
                     if poster_url:
-                        st.image(poster_url, use_container_width=200)
+                        st.image(poster_url, use_container_width=140)
                     else:
                         st.caption("🖼️ (pas d'affiche)")
 
@@ -303,9 +303,9 @@ def render_grid(d: pd.DataFrame, n_cols: int = 4) -> None:
                     if isinstance(tagline, str) and tagline.strip():
                         st.caption(f"“{tagline}”")
 
-                    if isinstance(summary, str) and summary.strip():
-                        with st.expander("Résumé"):
-                            st.write(summary)
+                    # if isinstance(summary, str) and summary.strip():
+                    #     with st.expander("Résumé"):
+                    #         st.write(summary)
 
                     st.page_link(
                         "pages/Film_details.py",
@@ -313,12 +313,12 @@ def render_grid(d: pd.DataFrame, n_cols: int = 4) -> None:
                         query_params={"title": title},
                     )
 
-render_grid(page_df, n_cols=6)
+render_grid(page_df, n_cols=8)
 
-with st.expander("Voir le tableau (debug)"):
-    show_cols = [
-        "ID", "Titre", "Année_de_sortie", "Genre", "Note_moyenne",
-        "Nombre_votes", "Popularité", "Réalisateurs", "Casting", "Pays_origine"
-    ]
-    show_cols = [c for c in show_cols if c in filtered.columns]
-    st.dataframe(filtered[show_cols].iloc[start:end], use_container_width=True)
+# with st.expander("Voir le tableau (debug)"):
+#     show_cols = [
+#         "ID", "Titre", "Année_de_sortie", "Genre", "Note_moyenne",
+#         "Nombre_votes", "Popularité", "Réalisateurs", "Casting", "Pays_origine"
+#     ]
+#     show_cols = [c for c in show_cols if c in filtered.columns]
+#     st.dataframe(filtered[show_cols].iloc[start:end], use_container_width=True)
