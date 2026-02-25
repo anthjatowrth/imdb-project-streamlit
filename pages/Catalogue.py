@@ -282,9 +282,9 @@ def render_grid(d: pd.DataFrame, n_cols: int = 4) -> None:
                 poster_raw = row.get("Poster1", "") or row.get("Poster2", "")
                 poster_url = resolve_poster_url(poster_raw)
 
-                with st.container(border=True):
+                with st.container(border=200):
                     if poster_url:
-                        st.image(poster_url, use_container_width=True)
+                        st.image(poster_url, use_container_width=200)
                     else:
                         st.caption("🖼️ (pas d'affiche)")
 
@@ -313,7 +313,7 @@ def render_grid(d: pd.DataFrame, n_cols: int = 4) -> None:
                         query_params={"title": title},
                     )
 
-render_grid(page_df, n_cols=4)
+render_grid(page_df, n_cols=6)
 
 with st.expander("Voir le tableau (debug)"):
     show_cols = [

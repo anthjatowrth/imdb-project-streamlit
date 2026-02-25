@@ -79,7 +79,7 @@ def _neighbors(artifacts: dict, *, ref_idx: int, top_n: int, candidate_k: int) -
     X = artifacts["X"]
     model: NearestNeighbors = artifacts["model"]
 
-    k = int(min(max(candidate_k, top_n + 50), X.shape[0]))
+    k = int(min(max(candidate_k, top_n +500), X.shape[0]))
     distances, indices = model.kneighbors(X[ref_idx], n_neighbors=k)
 
     inds = indices.ravel()
