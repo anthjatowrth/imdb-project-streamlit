@@ -803,3 +803,45 @@ hr {
 [data-testid="stCaptionContainer"] {
   display: none !important;
 }
+
+
+/* ── BACKGROUND LOGO FLOU ─────────────────────────────────────────────── */
+
+.stApp{
+  position: relative;
+  overflow: hidden;
+}
+
+.stApp::before{
+  content: "";
+  position: fixed;
+  inset: -60px;
+  background-image: url("assets/logo_noir.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: min(900px, 70vw);
+  opacity: 0.08;
+  filter: blur(42px) saturate(1.05);
+  transform: scale(1.08);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.stApp::after{
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(123,104,238,0.12), transparent 55%),
+    radial-gradient(circle at 85% 70%, rgba(123,104,238,0.10), transparent 55%),
+    linear-gradient(180deg, rgba(15,14,26,0.88) 0%, rgba(15,14,26,0.96) 60%, rgba(15,14,26,1) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* remet tout le contenu au-dessus des couches de fond */
+.stApp > *{
+  position: relative;
+  z-index: 1;
+}
+

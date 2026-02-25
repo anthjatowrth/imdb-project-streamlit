@@ -26,6 +26,7 @@ def load_artifacts(path: str) -> dict:
     df_ = load_df(path)
     return build_artifacts(df_)
 
+
 def _clip_text(s: Any, max_len: int = 34) -> str:
     txt = str(s) if s is not None else ""
     txt = txt.strip()
@@ -54,7 +55,6 @@ def _row_by_id(df_: pd.DataFrame, movie_id: str) -> pd.Series | None:
 
 
 def render_selected_movie_in_sidebar(df_: pd.DataFrame) -> None:
-    """Affiche une mini-card dans la sidebar avec le film de référence sélectionné."""
     movie_id = st.session_state.get("selected_movie_id", "")
     if not movie_id:
         return
@@ -144,6 +144,7 @@ def get_forced_5x3_recos(
     selected = selected.sort_values(["__cat_order", "distance_cosine"], ascending=[True, True])
     return selected.drop(columns="__cat_order")
 
+
 df = load_df(str(CSV_PATH))
 select_options = build_select_index(df)
 
@@ -158,16 +159,12 @@ def sidebar_extra() -> None:
 
 render_sidebar(extra=sidebar_extra)
 
-
 st.markdown(
     """
     <style>
-    /* ---------------------------
-       Header spacing
-    --------------------------- */
     .page-title{
       text-align:center;
-      margin: 10px 0 80px 0;      /* espace sous le titre */
+      margin: 10px 0 80px 0;
       font-family: 'Bebas Neue','Impact',sans-serif;
       font-size: 3.4rem;
       letter-spacing: 0.10em;
@@ -175,54 +172,67 @@ st.markdown(
       line-height: 1;
     }
     .page-intro{
-      text-align:left;            /* pleine largeur + aligné à gauche */
+      text-align:left;
       max-width: none;
-      margin: 0 0 20px 0;         /* espace sous l'intro */
+      margin: 0 0 20px 0;
       padding: 0 6px;
       color: var(--text-secondary);
       font-size: 1.05rem;
       line-height: 1.0;
     }
-    .intro-gap{ height: 22px; }   /* espace supplémentaire avant les filtres */
+    .intro-gap{ height: 22px; }
 
-    /* ---------------------------
-       Category sections (clear separation)
-    --------------------------- */
     .cat-gap{ height: 28px; }
 
-    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker) {
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker),
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker) > div{
       padding: 18px 18px !important;
       border-radius: 22px !important;
       box-shadow: 0 14px 34px rgba(0,0,0,0.40) !important;
-      border: 1px solid rgba(255,255,255,0.08) !important;
+      border: 1px solid rgba(255,255,255,0.18) !important;
       position: relative;
       overflow: hidden;
+      isolation: isolate;
+      background: rgba(15,14,26,0.92) !important;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
 
     [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker)::before{
       content:"";
       position:absolute;
       inset:0;
-      opacity: 0.55;
+      opacity: 0.90;
       pointer-events:none;
       background:
-        radial-gradient(circle at 18% 10%, rgba(123,104,238,0.18), transparent 55%),
-        radial-gradient(circle at 85% 0%, rgba(232,160,32,0.10), transparent 55%);
+        radial-gradient(circle at 18% 10%, rgba(123,104,238,0.35), transparent 65%),
+        radial-gradient(circle at 85% 0%, rgba(232,160,32,0.20), transparent 60%);
+      z-index: 0;
+    }
+
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker) *{
+      position: relative;
+      z-index: 1;
     }
 
     .cat-marker{ display:none; }
 
-    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.tres) {
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.tres),
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.tres) > div{
       border-left: 10px solid rgba(46, 204, 113, 0.95) !important;
-      background: linear-gradient(180deg, rgba(46, 204, 113, 0.14), rgba(255,255,255,0.02)) !important;
+      background: rgba(15,14,26,0.94) !important;
     }
-    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.pop) {
+
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.pop),
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.pop) > div{
       border-left: 10px solid rgba(232, 160, 32, 0.95) !important;
-      background: linear-gradient(180deg, rgba(232, 160, 32, 0.14), rgba(255,255,255,0.02)) !important;
+      background: rgba(15,14,26,0.94) !important;
     }
-    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.peu) {
+
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.peu),
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.peu) > div{
       border-left: 10px solid rgba(231, 76, 60, 0.95) !important;
-      background: linear-gradient(180deg, rgba(231, 76, 60, 0.14), rgba(255,255,255,0.02)) !important;
+      background: rgba(15,14,26,0.94) !important;
     }
 
     .cat-title{
@@ -242,13 +252,6 @@ st.markdown(
       z-index: 2;
     }
 
-    /* ---------------------------
-       Reco cards (blurred poster background)
-       Ajuste ici si c'est trop "fondu" :
-       - opacity dans ::before
-       - valeurs rgba dans ::after
-       - blur/filter dans ::before
-    --------------------------- */
     .reco-card{
       position: relative;
       display:flex;
@@ -272,7 +275,7 @@ st.markdown(
       background-position: center;
       filter: blur(12px) saturate(1.25) contrast(1.15);
       transform: scale(1.08);
-      opacity: 0.65; /* <-- augmente (0.7) si tu veux plus visible */
+      opacity: 0.65;
       pointer-events:none;
     }
 
@@ -285,7 +288,7 @@ st.markdown(
         rgba(15,14,26,0.12) 0%,
         rgba(15,14,26,0.48) 55%,
         rgba(15,14,26,0.72) 100%
-      ); /* <-- baisse ces alphas si c'est trop sombre */
+      );
       pointer-events:none;
     }
 
@@ -344,7 +347,7 @@ st.markdown(
       text-decoration:none !important;
       font-weight: 700;
       transition: all 0.2s ease;
-      backdrop-filter: blur(6px);
+      backdrop-filter: blur(60px);
     }
 
     .reco-btn:hover{
@@ -438,7 +441,6 @@ if run:
         min_rating=float(min_rating) if float(min_rating) > 0 else None,
         per_cat=5,
     )
-
 
 reco_df = st.session_state.reco_df
 if reco_df is not None:

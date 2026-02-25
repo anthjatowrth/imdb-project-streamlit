@@ -48,25 +48,61 @@ def to_int64_nullable(s: pd.Series) -> pd.Series:
     return pd.to_numeric(s, errors="coerce").astype("Int64")
 
 
-def load_css(css_path: str = "assets/style.css") -> None:
-    """
-    Injecte un fichier CSS dans Streamlit.
-    Import streamlit en local pour éviter de casser les scripts non-UI.
-    """
+from pathlib import Path
+import base64
+
+
+from pathlib import Path
+import base64
+
+
+def load_css(css_path: str = "assets/style.css",
+             bg_path: str = "assets/fond.png") -> None:
     try:
         import streamlit as st
     except Exception:
         return
 
-    p = Path(css_path)
-    if p.exists():
-        st.markdown(
-            f"<style>{p.read_text(encoding='utf-8')}</style>",
-            unsafe_allow_html=True,
-        )
-    p = Path(css_path)
-    if p.exists():
-        st.markdown(f"<style>{p.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
+    css = Path(css_path).read_text(encoding="utf-8")
+    bg_b64 = base64.b64encode(Path(bg_path).read_bytes()).decode("utf-8")
+
+    bg_css = f"""
+    .stApp{{ position: relative; }}
+
+    .stApp::before{{
+        content:"";
+        position: fixed;
+        inset: -120px;
+        background-image: url("data:image/png;base64,{bg_b64}");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: cover;
+        opacity: 0.50;
+        filter: blur(10px) saturate(1.05);
+        transform: scale(1.08);
+        pointer-events: none;
+        z-index: 0;
+    }}
+
+    .stApp::after{{
+        content:"";
+        position: fixed;
+        inset: 0;
+        background:
+            radial-gradient(circle at 20% 10%, rgba(123,104,238,0.10), transparent 55%),
+            radial-gradient(circle at 85% 70%, rgba(123,104,238,0.30), transparent 55%),
+            linear-gradient(180deg, rgba(15,14,26,0.50) 0%, rgba(15,14,26,0.55) 80%, rgba(15,14,26,1) 100%);
+        pointer-events: none;
+        z-index: 0;
+    }}
+
+    .stApp > *{{ position: relative; z-index: 1; }}
+    """
+
+    st.markdown(
+        f"<style>{css}\n{bg_css}</style>",
+        unsafe_allow_html=True,
+    )
 
 
 def clean_text(s: str) -> str:
