@@ -8,6 +8,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from deep_translator import GoogleTranslator
+from functools import lru_cache
 
 def clean_id_series(s: pd.Series) -> pd.Series:
     return s.astype("string").str.strip()
@@ -98,7 +100,7 @@ def find_movie_row(df: pd.DataFrame, title: str, col: str = "Titre") -> pd.Serie
         return None
     return df.loc[mask].iloc[0]
 
-def resolve_poster_url(raw: Any, *, tmdb_base: str = "https://image.tmdb.org/t/p/w500", allow_local: bool = True) -> str | None:
+def resolve_poster_url(raw: Any, *, tmdb_base: str = "https://image.tmdb.org/t/p/w500", allow_local: bool = True) -> str | None: 
     if raw is None:
         return None
     s = str(raw).strip()
@@ -127,7 +129,6 @@ def pick_poster_url(row: pd.Series, cols: tuple[str, ...] = ("Poster1", "Poster2
 
 
 def parse_simple_list(s: Any) -> list[str]:
-    """Parse une chaîne type "['France', 'USA']" ou "France, USA" en liste, robuste aux NaN."""
     if s is None or (isinstance(s, float) and np.isnan(s)):
         return []
     s = str(s).strip()
@@ -144,3 +145,35 @@ def clean_txt_for_reco(s: Any) -> str:
     s = re.sub(r"[,\|;/]+", " ", s)
     s = re.sub(r"\s+", " ", s).strip()
     return s
+
+
+
+@lru_cache(maxsize=5000)
+def translate_to_fr(text: str) -> str:
+    if not text or not isinstance(text, str):
+        return ""
+    text = text.strip()
+    if not text:
+        return ""
+    try:
+        translated = GoogleTranslator(source="auto", target="fr").translate(text)
+        return translated
+    except Exception:
+        return text
+    
+
+def format_votes(n: int | float | None, decimals: int = 1) -> str:
+    if n is None:
+        return "—"
+    try:
+        n = float(n)
+    except (TypeError, ValueError):
+        return "—"
+    if n >= 1_000_000:
+        value = n / 1_000_000
+        return f"{value:.{decimals}f} M".replace(".", ",")
+    elif n >= 1_000:
+        value = n / 1_000
+        return f"{value:.{decimals}f} k".replace(".", ",")
+    else:
+        return str(int(n))
