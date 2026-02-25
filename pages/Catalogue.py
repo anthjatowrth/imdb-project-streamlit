@@ -10,170 +10,145 @@ from src.utils import load_css, normalize_txt, read_csv_clean_columns, resolve_p
 
 st.set_page_config(page_title="Catalogue", layout="wide")
 
-# --- Si on vient d'une autre page (session) ---
 if "go_to_title" in st.session_state:
-    title = st.session_state.pop("go_to_title")
+    _ = st.session_state.pop("go_to_title")
     st.switch_page("pages/Film_details.py")
 
 load_css()
 render_sidebar()
 
-# --- CSS des cartes poster (1 seule fois) ---
 st.markdown(
     """
     <style>
     /* ===== Movie Card Wrapper ===== */
-    .card-wrap {
-        position: relative;
-        border-radius: 18px;
-        overflow: hidden;
-        height: 360px; /* ajuste la hauteur ici */
+    .card-wrap{
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      height: 390px;                 /* un peu plus haut pour éviter l’écrasement */
+      box-shadow: 0 16px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
     }
 
-    /* Le poster occupe tout */
-    .movie-card {
-        position: relative;
-        height: 100%;
-        width: 100%;
-        border-radius: 18px;
-        overflow: hidden;
-        background-image: var(--poster);
-        background-size: cover;
-        background-position: center;
-        transform: translateZ(0);
-        transition: transform 180ms ease, filter 180ms ease;
-        filter: saturate(0.95) contrast(1.02);
+    /* Le poster: on l'affiche en ENTIER (contain) */
+    .movie-card{
+      position: relative;
+      height: 100%;
+      width: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      background-image: var(--poster);
+      background-repeat: no-repeat;
+      background-size: contain;      /* <-- pour voir le poster en entier */
+      background-position: center;
+      background-color: rgba(0,0,0,0.25); /* fond quand le poster ne remplit pas tout */
+      transform: translateZ(0);
+      transition: transform 180ms ease, filter 180ms ease;
+      filter: saturate(0.98) contrast(1.03);
     }
 
-    /* Léger zoom au hover (moderne, discret) */
-    .card-wrap:hover .movie-card {
-        transform: scale(1.02);
-        filter: saturate(1.00) contrast(1.05);
+    .card-wrap:hover .movie-card{
+      transform: scale(1.015);
+      filter: saturate(1.05) contrast(1.07);
     }
 
-    /* Dégradé global très léger pour la profondeur */
-    .movie-card::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(120% 120% at 50% 0%,
-                    rgba(255,255,255,0.08) 0%,
-                    rgba(0,0,0,0.20) 55%,
-                    rgba(0,0,0,0.45) 100%);
-        pointer-events: none;
+    /* Dégradé global très léger */
+    .movie-card::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: radial-gradient(120% 120% at 50% 0%,
+                rgba(255,255,255,0.08) 0%,
+                rgba(0,0,0,0.20) 55%,
+                rgba(0,0,0,0.55) 100%);
+      pointer-events:none;
     }
 
-    /* ===== Bandeau bas flouté + terni ===== */
-    .movie-meta {
-        position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        padding: 14px 14px 12px 14px;
-        background: linear-gradient(180deg,
-                    rgba(0,0,0,0.00) 0%,
-                    rgba(0,0,0,0.55) 35%,
-                    rgba(0,0,0,0.72) 100%);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        pointer-events: none; /* pour que le clic passe au lien overlay */
+    /* Bandeau bas (lecture titre/infos) */
+    .movie-meta{
+      position:absolute;
+      left:0; right:0; bottom:0;
+      padding: 14px 14px 12px 14px;
+      background: linear-gradient(180deg,
+                rgba(0,0,0,0.00) 0%,
+                rgba(0,0,0,0.55) 35%,
+                rgba(0,0,0,0.80) 100%);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      pointer-events:none; /* ne bloque pas le clic du lien overlay */
     }
 
-    .movie-title {
-        font-size: 1.15rem;
-        font-weight: 750;
-        line-height: 1.15;
-        margin: 0 0 6px 0;
-        color: rgba(255,255,255,0.95);
-        text-shadow: 0 6px 18px rgba(0,0,0,0.55);
+    .movie-title{
+      font-size: 1.10rem;
+      font-weight: 750;
+      line-height: 1.15;
+      margin: 0 0 6px 0;
+      color: rgba(255,255,255,0.95);
+      text-shadow: 0 6px 18px rgba(0,0,0,0.55);
     }
 
-    .movie-sub {
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: rgba(255,255,255,0.75);
-        margin: 0;
-        text-shadow: 0 6px 18px rgba(0,0,0,0.50);
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        align-items: center;
+    .movie-sub{
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: rgba(255,255,255,0.78);
+      margin: 0;
+      text-shadow: 0 6px 18px rgba(0,0,0,0.50);
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
     }
 
-    .dot {
-        opacity: 0.65;
+    .dot{ opacity: 0.65; }
+
+    /* CTA hover (bouton visible au hover) */
+    .movie-cta{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      opacity:0;
+      transition: opacity 160ms ease;
+      pointer-events:none; /* le lien <a> gère le clic */
+    }
+    .card-wrap:hover .movie-cta{ opacity:1; }
+
+    /* le bouton hover est un <a> cliquable */
+    .movie-cta a{
+      pointer-events:auto;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(10,10,16,0.40);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: rgba(255,255,255,0.92) !important;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      box-shadow: 0 18px 38px rgba(0,0,0,0.40);
+      text-decoration: none !important;
+      transform: translateY(0);
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+    .movie-cta a:hover{
+      transform: translateY(-1px);
+      background: rgba(10,10,16,0.55);
+      border-color: rgba(255,255,255,0.30);
     }
 
-    /* ===== CTA hover "Voir la fiche" ===== */
-    .movie-cta {
-        position: absolute;
-        inset: 0;
-        display: grid;
-        place-items: center;
-        opacity: 0;
-        transition: opacity 160ms ease;
-        pointer-events: none; /* le lien overlay gère le clic */
-    }
+    /* Evite les gros gaps verticaux de Streamlit dans les colonnes */
+    div[data-testid="column"] > div{ gap: 0.35rem; }
 
-    .card-wrap:hover .movie-cta {
-        opacity: 1;
-    }
-
-    .movie-cta span {
-        padding: 10px 14px;
-        border-radius: 999px;
-        border: 1px solid rgba(255,255,255,0.18);
-        background: rgba(10,10,16,0.35);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        color: rgba(255,255,255,0.92);
-        font-weight: 750;
-        letter-spacing: 0.2px;
-        box-shadow: 0 18px 38px rgba(0,0,0,0.40);
-    }
-
-    /* ===== Le vrai lien Streamlit (st.page_link) devient un overlay invisible ===== */
-    .card-wrap > div[data-testid="stPageLink"] {
-        position: absolute !important;
-        inset: 0 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        z-index: 10;
-    }
-
-    .card-wrap > div[data-testid="stPageLink"] a {
-        position: absolute !important;
-        inset: 0 !important;
-        display: block !important;
-        opacity: 0 !important;          /* invisible */
-        text-decoration: none !important;
-        border: none !important;
-        background: transparent !important;
-    }
-
-    /* Retire l'espace vertical ajouté par streamlit autour du page_link */
-    .card-wrap > div[data-testid="stPageLink"] * {
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-
-    /* Optionnel : arrondis propres même si Streamlit injecte des wrappers */
-    div[data-testid="column"] .card-wrap {
-        box-shadow:
-            0 16px 40px rgba(0,0,0,0.35),
-            inset 0 1px 0 rgba(255,255,255,0.06);
-        border: 1px solid rgba(255,255,255,0.08);
-    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 st.title("📚 Catalogue des films")
-st.caption("Filtre le catalogue. Résultats triés par Popularité ↓, Note ↓, Votes ↓. Affichage paginé par 20.")
+st.caption("Filtre le catalogue. Résultats triés par Popularité ↓, Note ↓, Votes ↓. Affichage paginé par 24.")
 
 CSV_PATH = OUTPUT_DIR / "10_final_imdb_tmdb.csv"
-PAGE_SIZE = 20
+PAGE_SIZE = 24
 
 POPULARITY_MAP = {
     "faible notoriété": 1,
@@ -182,7 +157,7 @@ POPULARITY_MAP = {
     "très populaire": 4,
 }
 
-# ---------- Utils locaux ----------
+
 def split_csv_list(s: object) -> list[str]:
     if s is None or (isinstance(s, float) and np.isnan(s)):
         return []
@@ -191,10 +166,12 @@ def split_csv_list(s: object) -> list[str]:
         return []
     return [normalize_txt(x, collapse_spaces=True) for x in s.split(",") if str(x).strip()]
 
+
 def coerce_num(df: pd.DataFrame, col: str, default: float) -> None:
     if col not in df.columns:
         df[col] = default
     df[col] = pd.to_numeric(df[col], errors="coerce").fillna(default)
+
 
 def rank_base(d: pd.DataFrame) -> pd.DataFrame:
     return d.sort_values(
@@ -203,31 +180,40 @@ def rank_base(d: pd.DataFrame) -> pd.DataFrame:
         kind="mergesort",
     )
 
-# ---------- Chargement + préparation (cachés) ----------
+
 @st.cache_data(show_spinner=False)
 def load_df(path: str) -> pd.DataFrame:
     return read_csv_clean_columns(path)
+
 
 @st.cache_data(show_spinner=False)
 def prepare_df(path: str) -> pd.DataFrame:
     df = load_df(path)
 
-    for c in ["Titre", "Genre", "Réalisateurs", "Casting", "Pays_origine", "Poster1", "Poster2", "Accroche", "Résumé", "Popularité"]:
+    for c in [
+        "ID",
+        "Titre",
+        "Genre",
+        "Réalisateurs",
+        "Casting",
+        "Pays_origine",
+        "Poster1",
+        "Poster2",
+        "Accroche",
+        "Résumé",
+        "Popularité",
+    ]:
         if c not in df.columns:
             df[c] = ""
 
     coerce_num(df, "Année_de_sortie", 0)
-    df["Année_de_sortie"] = df["Année_de_sortie"].astype(int, errors="ignore")
+    df["Année_de_sortie"] = pd.to_numeric(df["Année_de_sortie"], errors="coerce").fillna(0).astype(int)
+
     coerce_num(df, "Note_moyenne", np.nan)
     coerce_num(df, "Nombre_votes", 0)
 
     df["_pop_score"] = (
-        df["Popularité"]
-        .astype(str)
-        .str.lower()
-        .map(POPULARITY_MAP)
-        .fillna(0)
-        .astype(int)
+        df["Popularité"].astype(str).str.lower().map(POPULARITY_MAP).fillna(0).astype(int)
     )
 
     df["_genre_list"] = df["Genre"].apply(split_csv_list)
@@ -236,6 +222,7 @@ def prepare_df(path: str) -> pd.DataFrame:
     df["_country_n"] = df["Pays_origine"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
 
     return rank_base(df)
+
 
 @st.cache_data(show_spinner=False)
 def build_title_index(df: pd.DataFrame) -> pd.DataFrame:
@@ -246,12 +233,14 @@ def build_title_index(df: pd.DataFrame) -> pd.DataFrame:
     tmp["director"] = tmp["Réalisateurs"].fillna("").astype(str).str.strip()
     tmp["key"] = tmp["title"].map(lambda x: normalize_txt(x, collapse_spaces=True))
     tmp["dir_len"] = tmp["director"].str.len()
+
     tmp = (
         tmp.sort_values(["title", "year", "dir_len"], ascending=[True, False, False])
-           .drop_duplicates("title", keep="first")
-           .reset_index(drop=True)
+        .drop_duplicates("title", keep="first")
+        .reset_index(drop=True)
     )
     return tmp[["title", "year", "director", "key"]]
+
 
 def get_suggestions(title_index: pd.DataFrame, typed: str, limit: int = 10) -> pd.DataFrame:
     q = normalize_txt(typed, collapse_spaces=True)
@@ -264,11 +253,22 @@ def get_suggestions(title_index: pd.DataFrame, typed: str, limit: int = 10) -> p
     contains = title_index[keys.str.contains(q, na=False)]
     return pd.concat([starts, contains]).drop_duplicates("title").head(limit)
 
-# ---------- Data ----------
+
+def _safe_text(x: object) -> str:
+    s = "" if x is None else str(x)
+    return (
+        s.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#039;")
+    )
+
+
 df_ranked = prepare_df(str(CSV_PATH))
 title_index = build_title_index(df_ranked)
 
-# ---------- Filtres ----------
+
 st.sidebar.header("Filtres")
 
 all_genres = sorted({g for lst in df_ranked["_genre_list"] for g in lst if g})
@@ -277,13 +277,19 @@ genre_choice = st.sidebar.multiselect(
     options=all_genres,
     default=[],
     help="Un film est gardé s'il contient au moins un des genres sélectionnés.",
+    placeholder="Choisissez un ou plusieurs genres",
 )
 
 countries = sorted({x for x in df_ranked["_country_n"].unique().tolist() if x})
-country_choice = st.sidebar.multiselect("Origine (Pays)", options=countries, default=[])
+country_choice = st.sidebar.multiselect(
+    "Origine (Pays)",
+    options=countries,
+    default=[],
+    placeholder="Choisissez un pays d'origine",
+)
 
-director_query = st.sidebar.text_input("Réalisateur (contient)", placeholder="ex: nolan")
-actor_query = st.sidebar.text_input("Acteur / Actrice (contient)", placeholder="ex: scarlett")
+director_query = st.sidebar.text_input("Réalisateur (contient)", placeholder="ex: Nolan")
+actor_query = st.sidebar.text_input("Acteur / Actrice (contient)", placeholder="ex: Scarlett")
 
 note_min = st.sidebar.slider("Note minimale", 0.0, 10.0, 0.0, 0.1)
 year_min, year_max = st.sidebar.slider("Année de sortie", 1950, 2025, (1950, 2025), 1)
@@ -294,9 +300,10 @@ pop_choice = st.sidebar.selectbox(
 )
 
 if st.sidebar.button("Réinitialiser les filtres"):
-    for k in ["cat_page"]:
+    for k in ["cat_page", "search_title", "search_suggestion"]:
         st.session_state.pop(k, None)
     st.rerun()
+
 
 mask = pd.Series(True, index=df_ranked.index)
 
@@ -328,11 +335,6 @@ if pop_choice != "Tous":
 filtered = df_ranked.loc[mask]
 total = len(filtered)
 
-st.session_state.setdefault("cat_page", 0)
-max_pages = max(0, (total - 1) // PAGE_SIZE)
-st.session_state.cat_page = min(st.session_state.cat_page, max_pages)
-
-# ---------- Recherche titre ----------
 st.markdown("### 🔎 Rechercher un film")
 
 typed = st.text_input(
@@ -367,7 +369,10 @@ else:
     if typed and len(typed) < 2:
         st.caption("Tape au moins 2 lettres.")
 
-# ---------- Pagination ----------
+st.session_state.setdefault("cat_page", 0)
+max_pages = max(0, (total - 1) // PAGE_SIZE)
+st.session_state.cat_page = min(st.session_state.cat_page, max_pages)
+
 c1, c2, c3 = st.columns([1, 1, 3], vertical_alignment="center")
 with c1:
     if st.button("⬅️ Précédent", disabled=(st.session_state.cat_page == 0)):
@@ -393,19 +398,8 @@ start = st.session_state.cat_page * PAGE_SIZE
 end = min(start + PAGE_SIZE, total)
 page_df = filtered.iloc[start:end]
 
-# ---------- Rendering grid (cartes poster) ----------
-def _safe_text(x: object) -> str:
-    # petit escape minimal pour éviter de casser l'HTML
-    s = "" if x is None else str(x)
-    return (
-        s.replace("&", "&amp;")
-         .replace("<", "&lt;")
-         .replace(">", "&gt;")
-         .replace('"', "&quot;")
-         .replace("'", "&#039;")
-    )
 
-def render_grid(d: pd.DataFrame, n_cols: int = 8) -> None:
+def render_grid(d: pd.DataFrame, n_cols: int = 6) -> None:
     rows = d.to_dict("records")
 
     for i in range(0, len(rows), n_cols):
@@ -421,7 +415,6 @@ def render_grid(d: pd.DataFrame, n_cols: int = 8) -> None:
                 poster_raw = row.get("Poster1", "") or row.get("Poster2", "")
                 poster_url = resolve_poster_url(poster_raw)
 
-                # fallback si pas de poster
                 if not poster_url:
                     poster_url = "https://via.placeholder.com/500x750?text=No+Poster"
 
@@ -430,12 +423,15 @@ def render_grid(d: pd.DataFrame, n_cols: int = 8) -> None:
                 r = f"{float(rating):.1f}" if pd.notna(rating) else "—"
                 v = f"{int(votes):,}".replace(",", " ")
 
-                # Wrapper -> card -> overlay hover -> page_link invisible overlay
+                href = f"Film_details?id={row['ID']}"
+
                 st.markdown(
                     f"""
                     <div class="card-wrap">
                       <div class="movie-card" style="--poster:url('{poster_url}')">
-                        <div class="movie-cta"><span>Voir la fiche</span></div>
+                        <div class="movie-cta">
+                          <a href="{href}">Voir la fiche</a>
+                        </div>
                         <div class="movie-meta">
                           <div class="movie-title">{t}</div>
                           <div class="movie-sub">
@@ -447,18 +443,10 @@ def render_grid(d: pd.DataFrame, n_cols: int = 8) -> None:
                           </div>
                         </div>
                       </div>
+                    </div>
                     """,
                     unsafe_allow_html=True,
                 )
 
-                # Le lien invisible qui recouvre toute la carte
-                st.page_link(
-                    "pages/Film_details.py",
-                    label="Voir la fiche",
-                    query_params={"title": title},
-                )
 
-                # ferme le wrapper
-                st.markdown("</div>", unsafe_allow_html=True)
-
-render_grid(page_df, n_cols=8)
+render_grid(page_df, n_cols=6)

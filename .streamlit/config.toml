@@ -10,7 +10,7 @@ backgroundColor = "#0f0e1a"
 secondaryBackgroundColor = "#1a1933"
 
 # Couleur du texte principal
-textColor = "#e8f5e9"
+textColor = "#fdffff"
 
 # Font globale (équivalent DM Sans)
 font = "sans serif"

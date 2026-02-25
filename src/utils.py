@@ -12,6 +12,8 @@ from deep_translator import GoogleTranslator
 from functools import lru_cache
 import pycountry
 from babel import Locale
+import requests
+import os
 
 def clean_id_series(s: pd.Series) -> pd.Series:
     return s.astype("string").str.strip()
@@ -102,32 +104,113 @@ def find_movie_row(df: pd.DataFrame, title: str, col: str = "Titre") -> pd.Serie
         return None
     return df.loc[mask].iloc[0]
 
-def resolve_poster_url(raw: Any, *, tmdb_base: str = "https://image.tmdb.org/t/p/w500", allow_local: bool = True) -> str | None: 
+def resolve_poster_url(
+    raw: Any,
+    *,
+    tmdb_base: str = "https://image.tmdb.org/t/p/w500",
+    allow_local: bool = True,
+) -> str | None:
     if raw is None:
         return None
+
     s = str(raw).strip()
     if not s or s.lower() == "nan":
         return None
 
-    if s.startswith("http://") or s.startswith("https://"):
+    # URL complète
+    if s.startswith(("http://", "https://")):
         return s
+
+    # URL protocole relatif
     if s.startswith("//"):
         return "https:" + s
+
+    # Path TMDB
     if s.startswith("/"):
         return tmdb_base + s
 
+    # Fichier local
     if allow_local and Path(s).exists():
         return s
 
     return None
 
-def pick_poster_url(row: pd.Series, cols: tuple[str, ...] = ("Poster1", "Poster2")) -> str | None:
+
+def _fetch_omdb_poster(
+    imdb_id: str,
+    *,
+    api_key: str,
+    session: requests.Session | None = None,
+    timeout: float = 8.0,
+) -> str | None:
+    if not api_key:
+        return None
+
+    sess = session or requests.Session()
+
+    r = sess.get(
+        "https://www.omdbapi.com/",
+        params={"apikey": api_key, "i": imdb_id},
+        timeout=timeout,
+    )
+
+    if r.status_code != 200:
+        return None
+
+    data = r.json()
+
+    if data.get("Response") != "True":
+        return None
+
+    poster = data.get("Poster")
+
+    if not poster or poster == "N/A":
+        return None
+
+    return poster
+
+
+def pick_poster_url(
+    row: pd.Series,
+    cols: tuple[str, ...] = ("Poster1", "Poster2"),
+    *,
+    imdb_col: str = "ID",
+    omdb_api_key: str | None = None,
+    omdb_timeout: float = 8.0,
+    session: requests.Session | None = None,
+) -> str | None:
+    """
+    1) tente Poster1 / Poster2 (TMDB ou URL complète)
+    2) si rien -> tente OMDb via IMDb ID
+    """
+
     for c in cols:
         if c in row and pd.notna(row[c]):
             url = resolve_poster_url(row[c])
             if url:
                 return url
-    return None
+
+    imdb_id = row.get(imdb_col)
+
+    if not imdb_id:
+        return None
+
+    imdb_id = str(imdb_id).strip()
+
+    if not imdb_id.startswith("tt"):
+        return None
+
+    key = omdb_api_key or os.getenv("OMDB_API_KEY")
+
+    try:
+        return _fetch_omdb_poster(
+            imdb_id,
+            api_key=key,
+            session=session,
+            timeout=omdb_timeout,
+        )
+    except Exception:
+        return None
 
 
 def parse_simple_list(s: Any) -> list[str]:

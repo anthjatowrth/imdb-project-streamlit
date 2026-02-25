@@ -12,17 +12,10 @@ from src.utils import load_css, pick_poster_url, read_csv_clean_columns
 
 CSV_PATH = OUTPUT_DIR / "10_final_imdb_tmdb.csv"
 
-
-# ------------------------------------------------
-# PAGE CONFIG
-# ------------------------------------------------
 st.set_page_config(page_title="Recommandations", layout="wide")
 load_css()
 
 
-# ------------------------------------------------
-# CACHING
-# ------------------------------------------------
 @st.cache_data(show_spinner=False)
 def load_df(path: str) -> pd.DataFrame:
     return read_csv_clean_columns(path)
@@ -33,10 +26,6 @@ def load_artifacts(path: str) -> dict:
     df_ = load_df(path)
     return build_artifacts(df_)
 
-
-# ------------------------------------------------
-# HELPERS
-# ------------------------------------------------
 def _clip_text(s: Any, max_len: int = 34) -> str:
     txt = str(s) if s is not None else ""
     txt = txt.strip()
@@ -155,10 +144,6 @@ def get_forced_5x3_recos(
     selected = selected.sort_values(["__cat_order", "distance_cosine"], ascending=[True, True])
     return selected.drop(columns="__cat_order")
 
-
-# ------------------------------------------------
-# DATA INIT (before sidebar)
-# ------------------------------------------------
 df = load_df(str(CSV_PATH))
 select_options = build_select_index(df)
 
@@ -174,9 +159,6 @@ def sidebar_extra() -> None:
 render_sidebar(extra=sidebar_extra)
 
 
-# ------------------------------------------------
-# PAGE CSS (intro spacing + category styling + blurred cards)
-# ------------------------------------------------
 st.markdown(
     """
     <style>
@@ -376,10 +358,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
-# ------------------------------------------------
-# HEADER
-# ------------------------------------------------
 st.markdown(
     """
     <div class="page-title">Recommandations</div>
@@ -397,10 +375,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-
-# ------------------------------------------------
-# CONTROLS
-# ------------------------------------------------
 col1, col2, col3 = st.columns([2.2, 1.2, 1.2], vertical_alignment="top")
 
 with col1:
@@ -466,9 +440,6 @@ if run:
     )
 
 
-# ------------------------------------------------
-# DISPLAY RECOS
-# ------------------------------------------------
 reco_df = st.session_state.reco_df
 if reco_df is not None:
     target_order = ["Très populaire", "Populaire", "Peu populaire"]
@@ -505,10 +476,8 @@ if reco_df is not None:
                     rating = row.get("Note_moyenne", "—")
                     votes = row.get("Nombre_votes", "—")
 
-                    # internal page link (adjust if your slug differs)
                     detail_href = f"Film_details?id={row['ID']}"
 
-                    # background image for blur layer (only if we have a poster)
                     bg_style = ""
                     if poster_url:
                         bg_style = f"style=\"--bg: url('{poster_url}');\""

@@ -20,8 +20,8 @@
 
   /* Texte */
   --text-primary: #e8f5e9;
-  --text-secondary: #a5d6a7;
-  --text-muted: #4caf50;
+  --text-secondary: #e6eeee;
+  --text-muted: #616b6b;
 
   /* Gradients */
   --grad-gold: linear-gradient(135deg, #e8a020, #f5c855);
