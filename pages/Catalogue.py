@@ -1,14 +1,16 @@
 from __future__ import annotations
-from src.ui import render_sidebar
+
 import numpy as np
 import pandas as pd
 import streamlit as st
 
+from src.ui import render_sidebar
 from src.config import OUTPUT_DIR
-from src.utils import load_css, normalize_txt, read_csv_clean_columns, resolve_poster_url, format_votes, format_duration, format_countries_fr
+from src.utils import load_css, normalize_txt, read_csv_clean_columns, resolve_poster_url
 
 st.set_page_config(page_title="Catalogue", layout="wide")
 
+# --- Si on vient d'une autre page (session) ---
 if "go_to_title" in st.session_state:
     title = st.session_state.pop("go_to_title")
     st.switch_page("pages/Film_details.py")
@@ -16,11 +18,162 @@ if "go_to_title" in st.session_state:
 load_css()
 render_sidebar()
 
+# --- CSS des cartes poster (1 seule fois) ---
+st.markdown(
+    """
+    <style>
+    /* ===== Movie Card Wrapper ===== */
+    .card-wrap {
+        position: relative;
+        border-radius: 18px;
+        overflow: hidden;
+        height: 360px; /* ajuste la hauteur ici */
+    }
+
+    /* Le poster occupe tout */
+    .movie-card {
+        position: relative;
+        height: 100%;
+        width: 100%;
+        border-radius: 18px;
+        overflow: hidden;
+        background-image: var(--poster);
+        background-size: cover;
+        background-position: center;
+        transform: translateZ(0);
+        transition: transform 180ms ease, filter 180ms ease;
+        filter: saturate(0.95) contrast(1.02);
+    }
+
+    /* Léger zoom au hover (moderne, discret) */
+    .card-wrap:hover .movie-card {
+        transform: scale(1.02);
+        filter: saturate(1.00) contrast(1.05);
+    }
+
+    /* Dégradé global très léger pour la profondeur */
+    .movie-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(120% 120% at 50% 0%,
+                    rgba(255,255,255,0.08) 0%,
+                    rgba(0,0,0,0.20) 55%,
+                    rgba(0,0,0,0.45) 100%);
+        pointer-events: none;
+    }
+
+    /* ===== Bandeau bas flouté + terni ===== */
+    .movie-meta {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 14px 14px 12px 14px;
+        background: linear-gradient(180deg,
+                    rgba(0,0,0,0.00) 0%,
+                    rgba(0,0,0,0.55) 35%,
+                    rgba(0,0,0,0.72) 100%);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        pointer-events: none; /* pour que le clic passe au lien overlay */
+    }
+
+    .movie-title {
+        font-size: 1.15rem;
+        font-weight: 750;
+        line-height: 1.15;
+        margin: 0 0 6px 0;
+        color: rgba(255,255,255,0.95);
+        text-shadow: 0 6px 18px rgba(0,0,0,0.55);
+    }
+
+    .movie-sub {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: rgba(255,255,255,0.75);
+        margin: 0;
+        text-shadow: 0 6px 18px rgba(0,0,0,0.50);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .dot {
+        opacity: 0.65;
+    }
+
+    /* ===== CTA hover "Voir la fiche" ===== */
+    .movie-cta {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        opacity: 0;
+        transition: opacity 160ms ease;
+        pointer-events: none; /* le lien overlay gère le clic */
+    }
+
+    .card-wrap:hover .movie-cta {
+        opacity: 1;
+    }
+
+    .movie-cta span {
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(10,10,16,0.35);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        color: rgba(255,255,255,0.92);
+        font-weight: 750;
+        letter-spacing: 0.2px;
+        box-shadow: 0 18px 38px rgba(0,0,0,0.40);
+    }
+
+    /* ===== Le vrai lien Streamlit (st.page_link) devient un overlay invisible ===== */
+    .card-wrap > div[data-testid="stPageLink"] {
+        position: absolute !important;
+        inset: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        z-index: 10;
+    }
+
+    .card-wrap > div[data-testid="stPageLink"] a {
+        position: absolute !important;
+        inset: 0 !important;
+        display: block !important;
+        opacity: 0 !important;          /* invisible */
+        text-decoration: none !important;
+        border: none !important;
+        background: transparent !important;
+    }
+
+    /* Retire l'espace vertical ajouté par streamlit autour du page_link */
+    .card-wrap > div[data-testid="stPageLink"] * {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Optionnel : arrondis propres même si Streamlit injecte des wrappers */
+    div[data-testid="column"] .card-wrap {
+        box-shadow:
+            0 16px 40px rgba(0,0,0,0.35),
+            inset 0 1px 0 rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.08);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.title("📚 Catalogue des films")
 st.caption("Filtre le catalogue. Résultats triés par Popularité ↓, Note ↓, Votes ↓. Affichage paginé par 20.")
 
 CSV_PATH = OUTPUT_DIR / "10_final_imdb_tmdb.csv"
-PAGE_SIZE = 30
+PAGE_SIZE = 20
 
 POPULARITY_MAP = {
     "faible notoriété": 1,
@@ -29,6 +182,7 @@ POPULARITY_MAP = {
     "très populaire": 4,
 }
 
+# ---------- Utils locaux ----------
 def split_csv_list(s: object) -> list[str]:
     if s is None or (isinstance(s, float) and np.isnan(s)):
         return []
@@ -49,6 +203,7 @@ def rank_base(d: pd.DataFrame) -> pd.DataFrame:
         kind="mergesort",
     )
 
+# ---------- Chargement + préparation (cachés) ----------
 @st.cache_data(show_spinner=False)
 def load_df(path: str) -> pd.DataFrame:
     return read_csv_clean_columns(path)
@@ -85,14 +240,11 @@ def prepare_df(path: str) -> pd.DataFrame:
 @st.cache_data(show_spinner=False)
 def build_title_index(df: pd.DataFrame) -> pd.DataFrame:
     tmp = df[["Titre", "Année_de_sortie", "Réalisateurs"]].copy()
-
     tmp["title"] = tmp["Titre"].fillna("").astype(str).str.strip()
     tmp = tmp[tmp["title"] != ""]
-
     tmp["year"] = pd.to_numeric(tmp["Année_de_sortie"], errors="coerce").astype("Int64")
     tmp["director"] = tmp["Réalisateurs"].fillna("").astype(str).str.strip()
     tmp["key"] = tmp["title"].map(lambda x: normalize_txt(x, collapse_spaces=True))
-
     tmp["dir_len"] = tmp["director"].str.len()
     tmp = (
         tmp.sort_values(["title", "year", "dir_len"], ascending=[True, False, False])
@@ -105,18 +257,18 @@ def get_suggestions(title_index: pd.DataFrame, typed: str, limit: int = 10) -> p
     q = normalize_txt(typed, collapse_spaces=True)
     if len(q) < 2:
         return title_index.iloc[0:0]
-
     keys = title_index["key"]
     starts = title_index[keys.str.startswith(q, na=False)]
     if len(starts) >= limit:
         return starts.head(limit)
-
     contains = title_index[keys.str.contains(q, na=False)]
     return pd.concat([starts, contains]).drop_duplicates("title").head(limit)
 
+# ---------- Data ----------
 df_ranked = prepare_df(str(CSV_PATH))
 title_index = build_title_index(df_ranked)
 
+# ---------- Filtres ----------
 st.sidebar.header("Filtres")
 
 all_genres = sorted({g for lst in df_ranked["_genre_list"] for g in lst if g})
@@ -152,8 +304,6 @@ if genre_choice:
     chosen = [normalize_txt(g, collapse_spaces=True) for g in genre_choice]
     mask &= df_ranked["_genre_list"].apply(lambda lst: any(g in lst for g in chosen))
 
-    sug_df = get_suggestions(title_index, typed, limit=10)
-
 if country_choice:
     chosen_c = [normalize_txt(c, collapse_spaces=True) for c in country_choice]
     mask &= df_ranked["_country_n"].apply(lambda s: any(c in s for c in chosen_c))
@@ -182,6 +332,7 @@ st.session_state.setdefault("cat_page", 0)
 max_pages = max(0, (total - 1) // PAGE_SIZE)
 st.session_state.cat_page = min(st.session_state.cat_page, max_pages)
 
+# ---------- Recherche titre ----------
 st.markdown("### 🔎 Rechercher un film")
 
 typed = st.text_input(
@@ -216,6 +367,7 @@ else:
     if typed and len(typed) < 2:
         st.caption("Tape au moins 2 lettres.")
 
+# ---------- Pagination ----------
 c1, c2, c3 = st.columns([1, 1, 3], vertical_alignment="center")
 with c1:
     if st.button("⬅️ Précédent", disabled=(st.session_state.cat_page == 0)):
@@ -241,74 +393,72 @@ start = st.session_state.cat_page * PAGE_SIZE
 end = min(start + PAGE_SIZE, total)
 page_df = filtered.iloc[start:end]
 
-def render_grid(d: pd.DataFrame, n_cols: int = 4) -> None:
+# ---------- Rendering grid (cartes poster) ----------
+def _safe_text(x: object) -> str:
+    # petit escape minimal pour éviter de casser l'HTML
+    s = "" if x is None else str(x)
+    return (
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace('"', "&quot;")
+         .replace("'", "&#039;")
+    )
+
+def render_grid(d: pd.DataFrame, n_cols: int = 8) -> None:
     rows = d.to_dict("records")
+
     for i in range(0, len(rows), n_cols):
         cols = st.columns(n_cols, vertical_alignment="top")
+
         for col, row in zip(cols, rows[i : i + n_cols]):
             with col:
                 title = row.get("Titre", "—")
                 year = row.get("Année_de_sortie", "—")
                 rating = row.get("Note_moyenne", np.nan)
                 votes = row.get("Nombre_votes", 0)
-                pop_label = row.get("Popularité", "")
-                genre = row.get("Genre", "")
-                directors = row.get("Réalisateurs", "")
-                country = row.get("Pays_origine", "")
-                tagline = row.get("Accroche", "")
 
                 poster_raw = row.get("Poster1", "") or row.get("Poster2", "")
                 poster_url = resolve_poster_url(poster_raw)
 
-                with st.container(border=True):
-                    if poster_url:
-                        st.image(poster_url, use_container_width=True, output_format="JPEG", caption=None)
-                        st.markdown(
-                            """
-                            <style>
-                            [data-testid="stImage"] img{
-                                height: 220px;
-                                object-fit: cover;
-                                width: 100%;
-                                border-radius: 6px;
-                            }
-                            </style>
-                            """,
-                            unsafe_allow_html=True,)
-                    else:
-                        st.caption("🖼️ (pas d'affiche)")
+                # fallback si pas de poster
+                if not poster_url:
+                    poster_url = "https://via.placeholder.com/500x750?text=No+Poster"
 
-                    votes_txt = format_votes(votes)
-                    rating_txt = f"{rating:.1f}" if pd.notna(rating) else "—"
-                    year_txt = str(int(year)) if pd.notna(year) and str(year).strip() != "" else "—"
-                    pop_txt = pop_label if str(pop_label).strip() else "—"
+                t = _safe_text(title)
+                y = _safe_text(year)
+                r = f"{float(rating):.1f}" if pd.notna(rating) else "—"
+                v = f"{int(votes):,}".replace(",", " ")
 
-                    st.markdown(
-                        f"""
-                        <div style='font-size:16px;font-weight:600;height:40px;white-space:nowrap;overflow:hidden;text-align:center;text-overflow:ellipsis'>{title}</div>
-                        <div style="font-size:13px;opacity:0.75;line-height:1.5;margin-top:6px;text-align:center;">
-                                {year_txt}<br>
-                            ⭐ {rating_txt}<br>
-                            🗳️ {votes_txt}<br>
-                            🔥 {pop_txt}
+                # Wrapper -> card -> overlay hover -> page_link invisible overlay
+                st.markdown(
+                    f"""
+                    <div class="card-wrap">
+                      <div class="movie-card" style="--poster:url('{poster_url}')">
+                        <div class="movie-cta"><span>Voir la fiche</span></div>
+                        <div class="movie-meta">
+                          <div class="movie-title">{t}</div>
+                          <div class="movie-sub">
+                            <span>{y}</span>
+                            <span class="dot">•</span>
+                            <span>⭐ {r}</span>
+                            <span class="dot">•</span>
+                            <span>🗳️ {v}</span>
+                          </div>
                         </div>
-                        """,
-                        unsafe_allow_html=True)
+                      </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-                    if genre:
-                        st.caption(f"Genre : {genre}")
-                    if country:
-                        st.caption(f"Origine : {country}")
-                    if directors:
-                        st.caption(f"Réalisateur : {directors}")
+                # Le lien invisible qui recouvre toute la carte
+                st.page_link(
+                    "pages/Film_details.py",
+                    label="Voir la fiche",
+                    query_params={"title": title},
+                )
 
-                    if isinstance(tagline, str) and tagline.strip():
-                        st.caption(f"“{tagline}”")
+                # ferme le wrapper
+                st.markdown("</div>", unsafe_allow_html=True)
 
-                    st.page_link(
-                        "pages/Film_details.py",
-                        label="Voir la fiche",
-                        query_params={"title": title},
-                    )
-
-render_grid(page_df, n_cols=6)
+render_grid(page_df, n_cols=8)
