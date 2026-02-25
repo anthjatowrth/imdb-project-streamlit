@@ -15,17 +15,7 @@ st.set_page_config(
 
 load_css()
 render_sidebar()
-
-col_logo, col_title = st.columns([1, 6])
-with col_logo:
-    st.markdown("## 🎬")
-with col_title:
-    st.title("IMDb Recommender")
-    st.caption(
-        "Une app Streamlit pour recommander des films en fonction de tes préférences "
-        "(années, genres, réalisateur, film favori…)."
-    )
-
+st.image("assets/logo_noir.png")
 st.divider()
 st.subheader("🚀 Commencer")
 

@@ -1,24 +1,20 @@
 [theme]
 
-primaryColor = "#F5C518"                 
-backgroundColor = "#0B0F19"              
-secondaryBackgroundColor = "#141A2A"     
-textColor = "#F1F5F9"                    
+# Couleur principale (ton violet)
+primaryColor = "#7b68ee"
+
+# Fond principal (ton void)
+backgroundColor = "#0f0e1a"
+
+# Fond des containers / sidebar / widgets
+secondaryBackgroundColor = "#1a1933"
+
+# Couleur du texte principal
+textColor = "#e8f5e9"
+
+# Font globale (équivalent DM Sans)
 font = "sans serif"
 
-[browser]
-gatherUsageStats = false
-
-[client]
-
-showErrorDetails = true
 
 [server]
-
-headless = true
 runOnSave = true
-
-maxUploadSize = 200
-
-enableCORS = false
-enableXsrfProtection = true

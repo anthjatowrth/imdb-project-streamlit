@@ -10,35 +10,19 @@ from src.reco.engine import build_artifacts, recommend
 from src.ui import render_sidebar
 from src.utils import load_css, pick_poster_url, read_csv_clean_columns
 
-# ----------------------------
-# Page config + UI shell
-# ----------------------------
-st.set_page_config(page_title="Recommandations", layout="wide")
-load_css()
-render_sidebar()
-
-st.markdown(
-    """
-    <div style="
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 18px;
-        padding: 18px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.35);
-        margin-bottom: 14px;">
-      <h3 style="margin:0 0 8px 0;">🎬 Recommandations</h3>
-      <p style="margin:0;color:#A8A8C0;">Choisis un film, fixe des filtres, puis affiche 5 recommandations par catégorie.</p>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
 CSV_PATH = OUTPUT_DIR / "10_final_imdb_tmdb.csv"
 
 
-# ----------------------------
-# Caching
-# ----------------------------
+# ------------------------------------------------
+# PAGE CONFIG
+# ------------------------------------------------
+st.set_page_config(page_title="Recommandations", layout="wide")
+load_css()
+
+
+# ------------------------------------------------
+# CACHING
+# ------------------------------------------------
 @st.cache_data(show_spinner=False)
 def load_df(path: str) -> pd.DataFrame:
     return read_csv_clean_columns(path)
@@ -50,9 +34,9 @@ def load_artifacts(path: str) -> dict:
     return build_artifacts(df_)
 
 
-# ----------------------------
-# Helpers
-# ----------------------------
+# ------------------------------------------------
+# HELPERS
+# ------------------------------------------------
 def _clip_text(s: Any, max_len: int = 34) -> str:
     txt = str(s) if s is not None else ""
     txt = txt.strip()
@@ -71,6 +55,57 @@ def _fmt_votes(v: Any) -> str:
 
 
 @st.cache_data(show_spinner=False)
+def _row_by_id(df_: pd.DataFrame, movie_id: str) -> pd.Series | None:
+    if not movie_id:
+        return None
+    tmp = df_[df_["ID"].astype(str) == str(movie_id)]
+    if tmp.empty:
+        return None
+    return tmp.iloc[0]
+
+
+def render_selected_movie_in_sidebar(df_: pd.DataFrame) -> None:
+    """Affiche une mini-card dans la sidebar avec le film de référence sélectionné."""
+    movie_id = st.session_state.get("selected_movie_id", "")
+    if not movie_id:
+        return
+
+    row = _row_by_id(df_, str(movie_id))
+    if row is None:
+        return
+
+    title = str(row.get("Titre", "—"))
+    year = row.get("Année_de_sortie", "—")
+    rating = row.get("Note_moyenne", "—")
+    votes = _fmt_votes(row.get("Nombre_votes", "—"))
+    director = str(row.get("Réalisateurs", "—"))
+
+    poster_url = pick_poster_url(row)
+    poster_html = (
+        f"<img class='sidebar-picked-poster' src='{poster_url}' alt='poster'/>"
+        if poster_url
+        else "<div class='sidebar-picked-poster'></div>"
+    )
+
+    st.sidebar.markdown(
+        f"""
+        <div class="sidebar-picked-wrap">
+          <div class="sidebar-picked-title">Vous avez choisi</div>
+          <div class="sidebar-picked-card">
+            {poster_html}
+            <div class="sidebar-picked-meta">
+              <div class="sidebar-picked-name">{_clip_text(title, 38)}</div>
+              <p class="sidebar-picked-sub">{year} • ⭐ {rating} • 👥 {votes}</p>
+              <p class="sidebar-picked-sub">{_clip_text(director, 30)}</p>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+@st.cache_data(show_spinner=False)
 def build_select_index(df_: pd.DataFrame) -> list[dict]:
     tmp = df_[["ID", "Titre", "Année_de_sortie", "Réalisateurs", "Nombre_votes"]].copy()
 
@@ -82,7 +117,6 @@ def build_select_index(df_: pd.DataFrame) -> list[dict]:
     tmp["votes"] = pd.to_numeric(tmp["Nombre_votes"], errors="coerce").fillna(0).astype(int)
 
     tmp["ID"] = tmp["ID"].astype(str)
-
     tmp = tmp.sort_values(["votes", "year", "title"], ascending=[False, False, True])
 
     return tmp[["ID", "title", "year", "director", "votes"]].to_dict("records")
@@ -122,54 +156,9 @@ def get_forced_5x3_recos(
     return selected.drop(columns="__cat_order")
 
 
-# ----------------------------
-# Mini-card CSS
-# ----------------------------
-st.markdown(
-    """
-    <style>
-    .reco-grid { margin-top: 8px; margin-bottom: 10px; }
-
-    .mini-card{
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.03);
-      border-radius: 14px;
-      padding: 10px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.25);
-    }
-
-    .mini-poster{
-      width: 100%;
-      height: 240px;
-      object-fit: cover;
-      border-radius: 10px;
-      display: block;
-      margin-bottom: 8px;
-      background: rgba(255,255,255,0.04);
-    }
-
-    .mini-title{
-      font-size: 0.92rem;
-      line-height: 1.1;
-      margin: 0 0 4px 0;
-    }
-
-    .mini-meta{
-      font-size: 0.78rem;
-      color: rgba(168,168,192,0.95);
-      margin: 0;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# ----------------------------
-# Data init
-# ----------------------------
+# ------------------------------------------------
+# DATA INIT (before sidebar)
+# ------------------------------------------------
 df = load_df(str(CSV_PATH))
 select_options = build_select_index(df)
 
@@ -177,31 +166,271 @@ st.session_state.setdefault("selected_movie_id", "")
 st.session_state.setdefault("selected_title", "")
 st.session_state.setdefault("reco_df", None)
 
-# ----------------------------
-# Controls
-# ----------------------------
+
+def sidebar_extra() -> None:
+    render_selected_movie_in_sidebar(df)
+
+
+render_sidebar(extra=sidebar_extra)
+
+
+# ------------------------------------------------
+# PAGE CSS (intro spacing + category styling + blurred cards)
+# ------------------------------------------------
+st.markdown(
+    """
+    <style>
+    /* ---------------------------
+       Header spacing
+    --------------------------- */
+    .page-title{
+      text-align:center;
+      margin: 10px 0 80px 0;      /* espace sous le titre */
+      font-family: 'Bebas Neue','Impact',sans-serif;
+      font-size: 3.4rem;
+      letter-spacing: 0.10em;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+    .page-intro{
+      text-align:left;            /* pleine largeur + aligné à gauche */
+      max-width: none;
+      margin: 0 0 20px 0;         /* espace sous l'intro */
+      padding: 0 6px;
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      line-height: 1.0;
+    }
+    .intro-gap{ height: 22px; }   /* espace supplémentaire avant les filtres */
+
+    /* ---------------------------
+       Category sections (clear separation)
+    --------------------------- */
+    .cat-gap{ height: 28px; }
+
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker) {
+      padding: 18px 18px !important;
+      border-radius: 22px !important;
+      box-shadow: 0 14px 34px rgba(0,0,0,0.40) !important;
+      border: 1px solid rgba(255,255,255,0.08) !important;
+      position: relative;
+      overflow: hidden;
+    }
+
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker)::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      opacity: 0.55;
+      pointer-events:none;
+      background:
+        radial-gradient(circle at 18% 10%, rgba(123,104,238,0.18), transparent 55%),
+        radial-gradient(circle at 85% 0%, rgba(232,160,32,0.10), transparent 55%);
+    }
+
+    .cat-marker{ display:none; }
+
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.tres) {
+      border-left: 10px solid rgba(46, 204, 113, 0.95) !important;
+      background: linear-gradient(180deg, rgba(46, 204, 113, 0.14), rgba(255,255,255,0.02)) !important;
+    }
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.pop) {
+      border-left: 10px solid rgba(232, 160, 32, 0.95) !important;
+      background: linear-gradient(180deg, rgba(232, 160, 32, 0.14), rgba(255,255,255,0.02)) !important;
+    }
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.cat-marker.peu) {
+      border-left: 10px solid rgba(231, 76, 60, 0.95) !important;
+      background: linear-gradient(180deg, rgba(231, 76, 60, 0.14), rgba(255,255,255,0.02)) !important;
+    }
+
+    .cat-title{
+      margin: 0 0 8px 0;
+      font-family: 'Bebas Neue','Impact',sans-serif !important;
+      letter-spacing: 0.12em;
+      font-size: 1.65rem;
+      color: var(--text-primary) !important;
+      position: relative;
+      z-index: 2;
+    }
+    .cat-sub{
+      margin: -2px 0 16px 0;
+      color: rgba(168,168,192,0.98);
+      font-size: 0.90rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ---------------------------
+       Reco cards (blurred poster background)
+       Ajuste ici si c'est trop "fondu" :
+       - opacity dans ::before
+       - valeurs rgba dans ::after
+       - blur/filter dans ::before
+    --------------------------- */
+    .reco-card{
+      position: relative;
+      display:flex;
+      flex-direction:column;
+      height:100%;
+      border-radius: 18px;
+      padding: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.38);
+      transition: all 0.25s ease;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .reco-card::before{
+      content:"";
+      position:absolute;
+      inset:-16px;
+      background-image: var(--bg, none);
+      background-size: cover;
+      background-position: center;
+      filter: blur(12px) saturate(1.25) contrast(1.15);
+      transform: scale(1.08);
+      opacity: 0.65; /* <-- augmente (0.7) si tu veux plus visible */
+      pointer-events:none;
+    }
+
+    .reco-card::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: linear-gradient(
+        180deg,
+        rgba(15,14,26,0.12) 0%,
+        rgba(15,14,26,0.48) 55%,
+        rgba(15,14,26,0.72) 100%
+      ); /* <-- baisse ces alphas si c'est trop sombre */
+      pointer-events:none;
+    }
+
+    .reco-card > *{ position: relative; z-index: 2; }
+
+    .reco-card:hover{
+      border-color: rgba(123, 104, 238, 0.55);
+      transform: translateY(-4px);
+      box-shadow: 0 0 34px rgba(123, 104, 238, 0.25);
+    }
+
+    .reco-poster{
+      width:100%;
+      height: 340px;
+      object-fit: cover;
+      border-radius: 14px;
+      display:block;
+      margin-bottom: 12px;
+      background: rgba(255,255,255,0.04);
+    }
+
+    .reco-title{
+      font-family:'Bebas Neue','Impact',sans-serif;
+      font-size: 1.10rem;
+      letter-spacing: 0.06em;
+      color: var(--text-primary);
+      margin: 0 0 6px 0;
+    }
+
+    .reco-meta{
+      font-size: 0.82rem;
+      color: rgba(168,168,192,0.98);
+      margin: 0 0 10px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .reco-spacer{ flex-grow: 1; }
+
+    .reco-btn-wrap{
+      display:flex;
+      justify-content:flex-start;
+    }
+
+    .reco-btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width: 140px;
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(123,104,238,0.16);
+      color: rgba(167,139,250,1);
+      text-decoration:none !important;
+      font-weight: 700;
+      transition: all 0.2s ease;
+      backdrop-filter: blur(6px);
+    }
+
+    .reco-btn:hover{
+      background: rgba(123,104,238,0.28);
+      border-color: rgba(123,104,238,0.60);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ------------------------------------------------
+# HEADER
+# ------------------------------------------------
+st.markdown(
+    """
+    <div class="page-title">Recommandations</div>
+
+    <div class="page-intro">
+      Choisis un film que tu aimes (ou un film “référence”), et on te proposera des idées à regarder ensuite.
+      Tu peux aussi ajuster les filtres (période, note minimale) pour affiner les suggestions.
+      <br/><br/>
+      Les résultats sont organisés en trois niveaux de popularité pour te proposer à la fois des valeurs sûres…
+      et des pépites moins connues.
+    </div>
+
+    <div class="intro-gap"></div>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ------------------------------------------------
+# CONTROLS
+# ------------------------------------------------
 col1, col2, col3 = st.columns([2.2, 1.2, 1.2], vertical_alignment="top")
 
 with col1:
-    def fmt(o: dict) -> str:
-        return f"{o['title']} ({o['year']}) — {o['director'] or '—'}"
+    def fmt(o: dict | None) -> str:
+        if not o:
+            return "— Sélectionne un film de référence —"
+        director = o.get("director") or "—"
+        year = o.get("year") or "—"
+        return f"{o['title']} ({year}) — {director}"
 
     chosen = st.selectbox(
-        "Film de référence (recherche intégrée)",
-        options=select_options,
+        "Film de référence",
+        options=[None, *select_options],
         format_func=fmt,
-        index=0 if select_options else None,
+        index=0,
+        help="Choisis un film que tu aimes : on s’en servira comme point de départ pour les recommandations.",
     )
 
     if chosen:
         st.session_state.selected_movie_id = chosen["ID"]
         st.session_state.selected_title = chosen["title"]
+    else:
+        st.session_state.selected_movie_id = ""
+        st.session_state.selected_title = ""
 
 st.markdown(f"**Film sélectionné :** {st.session_state.selected_title or '—'}")
 
 with col2:
     year_min, year_max = st.slider(
-        "Période de sortie (recommandations)",
+        "Période de sortie",
         min_value=1950,
         max_value=2025,
         value=(1950, 2025),
@@ -210,12 +439,12 @@ with col2:
 
 with col3:
     min_rating = st.number_input(
-        "Note minimale (recommandations)",
+        "Note minimale",
         min_value=0.0,
         max_value=10.0,
         value=0.0,
         step=0.1,
-        help="0.0 = pas de filtre. Sinon, les reco doivent avoir au moins cette note.",
+        help="0.0 = pas de filtre. Sinon, on garde uniquement les films au-dessus de cette note.",
     )
 
 run = st.button("Lancer la recommandation", type="primary")
@@ -224,7 +453,7 @@ if run:
     artifacts = load_artifacts(str(CSV_PATH))
     movie_id = st.session_state.selected_movie_id
     if not movie_id:
-        st.warning("Choisis un film de référence.")
+        st.warning("Choisis d’abord un film de référence 🙂")
         st.stop()
 
     st.session_state.reco_df = get_forced_5x3_recos(
@@ -236,76 +465,78 @@ if run:
         per_cat=5,
     )
 
-# ----------------------------
-# Display recos
-# ----------------------------
+
+# ------------------------------------------------
+# DISPLAY RECOS
+# ------------------------------------------------
 reco_df = st.session_state.reco_df
 if reco_df is not None:
-    st.markdown(
-        """
-        <h3 style="
-            text-align:center;
-            margin-top:10px;
-            margin-bottom:20px;
-            letter-spacing:0.5px;
-        ">
-        Recommandations
-        </h3>
-        """,
-        unsafe_allow_html=True,
-    )
-
     target_order = ["Très populaire", "Populaire", "Peu populaire"]
 
-    for cat in target_order:
-        st.markdown(f"### {cat}")
+    cat_info = {
+        "Très populaire": ("tres", "Des films très connus, faciles à aimer — parfaits pour une soirée “valeur sûre”."),
+        "Populaire": ("pop", "Un bon équilibre : connus, mais avec souvent de belles surprises."),
+        "Peu populaire": ("peu", "Des films moins exposés — idéal si tu veux découvrir des pépites."),
+    }
 
-        block = reco_df[reco_df["Popularité"] == cat].head(5)
-        if block.empty:
-            st.caption("Aucun résultat.")
-            continue
+    for idx, cat in enumerate(target_order):
+        cls, subtitle = cat_info[cat]
 
-        cols = st.columns(5, gap="small", vertical_alignment="top")
+        with st.container(border=True):
+            st.markdown(f"<div class='cat-marker {cls}'></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='cat-title'>{cat}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='cat-sub'>{subtitle}</div>", unsafe_allow_html=True)
 
-        for i, (_, row) in enumerate(block.iterrows()):
-            with cols[i]:
-                poster_url = pick_poster_url(row)
+            block = reco_df[reco_df["Popularité"] == cat].head(5)
+            if block.empty:
+                st.caption("Aucun résultat.")
+                continue
 
-                full_title = str(row.get("Titre", "—"))
-                title_short = _clip_text(full_title, max_len=34)
+            cols = st.columns(5, gap="small", vertical_alignment="top")
 
-                year = row.get("Année_de_sortie", "—")
-                rating = row.get("Note_moyenne", "—")
-                votes = row.get("Nombre_votes", "—")
+            for i, (_, row) in enumerate(block.iterrows()):
+                with cols[i]:
+                    poster_url = pick_poster_url(row)
 
-                genre = row.get("Genre", "—")
-                director = row.get("Réalisateurs", "—")
+                    full_title = str(row.get("Titre", "—"))
+                    title_short = _clip_text(full_title, max_len=34)
 
-                if poster_url:
-                    poster_html = f"<img class='mini-poster' src='{poster_url}' alt='poster'/>"
-                else:
-                    poster_html = (
-                        "<div class='mini-poster' "
-                        "style='display:flex;align-items:center;justify-content:center;'>"
-                        "<span style='font-size:0.8rem;color:rgba(168,168,192,0.95)'>Poster indisponible</span>"
-                        "</div>"
+                    year = row.get("Année_de_sortie", "—")
+                    rating = row.get("Note_moyenne", "—")
+                    votes = row.get("Nombre_votes", "—")
+
+                    # internal page link (adjust if your slug differs)
+                    detail_href = f"Film_details?id={row['ID']}"
+
+                    # background image for blur layer (only if we have a poster)
+                    bg_style = ""
+                    if poster_url:
+                        bg_style = f"style=\"--bg: url('{poster_url}');\""
+
+                    if poster_url:
+                        poster_html = f"<img class='reco-poster' src='{poster_url}' alt='poster'/>"
+                    else:
+                        poster_html = (
+                            "<div class='reco-poster' "
+                            "style='display:flex;align-items:center;justify-content:center;'>"
+                            "<span style='font-size:0.8rem;color:rgba(168,168,192,0.95)'>Poster indisponible</span>"
+                            "</div>"
+                        )
+
+                    st.markdown(
+                        f"""
+                        <div class="reco-card" {bg_style} title="{full_title}">
+                          {poster_html}
+                          <div class="reco-title">{title_short}</div>
+                          <div class="reco-meta">{year} • ⭐ {rating} • 👥 {_fmt_votes(votes)}</div>
+                          <div class="reco-spacer"></div>
+                          <div class="reco-btn-wrap">
+                            <a class="reco-btn" href="{detail_href}">Voir la fiche</a>
+                          </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
                     )
 
-                st.markdown(
-                    f"""
-                    <div class="mini-card" title="{full_title} • {year} • {director} • {genre}">
-                      {poster_html}
-                      <div class="mini-title"><b>{title_short}</b></div>
-                      <p class="mini-meta">{year} • ⭐ {rating} • 👥 {_fmt_votes(votes)}</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-                st.page_link(
-                    "pages/Film_details.py",
-                    label="Voir la fiche",
-                    query_params={"id": str(row["ID"])},
-                )
-
-        st.markdown("<div class='reco-grid'></div>", unsafe_allow_html=True)
+        if idx < len(target_order) - 1:
+            st.markdown("<div class='cat-gap'></div>", unsafe_allow_html=True)
