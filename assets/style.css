@@ -113,7 +113,7 @@ section[data-testid="stSidebar"] div[data-testid="stButton"] > button {
   width: 100%;
   padding: 1.05rem 1.15rem;
   font-family: 'Bebas Neue', 'Impact', sans-serif;
-  font-size: 1.25rem;
+  font-size: 1.6rem;
   font-weight: 700;
   letter-spacing: 0.08em;
 
@@ -1190,4 +1190,26 @@ div[data-testid="column"] > div { gap: 0.35rem; }
 
 .catalogue-grid-row {
   margin-bottom: 1.5rem;
+}
+
+/* ── TABS ───────────────────────────────────────────────────────────────── */
+div[data-testid="stTabs"] > div:first-child {
+    display: flex;
+    width: 100%;
+}
+
+button[data-baseweb="tab"] {
+    flex: 1;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-family: 'Bebas Neue', Impact, sans-serif;
+    letter-spacing: 0.12em;
+    padding: 1.2rem 1rem;
+}
+
+
+div[data-testid="stTabsContent"] {
+    margin-top: 1rem;
+    margin-left: 0 !important;
+    padding-left: 0 !important;
 }

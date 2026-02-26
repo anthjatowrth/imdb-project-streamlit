@@ -11,7 +11,7 @@ render_sidebar()
 
 st.markdown(
     """
-<div style="text-align:center; margin: 2rem 0 1.5rem 0;">
+<div style="text-align:center; margin: 0.2rem 0 1.5rem 0;">
   <div style="
       font-family:'Bebas Neue', Impact, sans-serif;
       font-size: clamp(3rem, 5vw, 5rem);
@@ -25,7 +25,7 @@ st.markdown(
   <div style="
       color: rgba(210,210,235,0.9);
       font-size: 1.15rem;
-      margin-top: 0.6rem;
+      margin-top: 0.3rem;
       letter-spacing: 0.04em;
   ">
     Explore, découvre et trouve ton prochain chef-d'œuvre.
@@ -45,32 +45,34 @@ st.markdown(
 # ---------------------------------------------------------------------
 # HERO (base)
 # ---------------------------------------------------------------------
-left, right = st.columns([1.2, 1], gap="large")
 
-with left:
-    st.caption("🎥 Cinéma indépendant · Département 23")
 
-    st.title("Le cinéma ancré dans la Creuse")
-    st.write("**La data au service du cinéma de proximité.**")
+st.caption("🎥 Cinéma indépendant · Département 23")
 
-    st.write(
-        "CinéData Creuse naît de la rencontre entre un cinéma indépendant de la Creuse "
-        "et la puissance de l'analyse de données. Moderniser sans perdre l'âme locale — "
-        "c'est notre mission chez TetraData."
-    )
+st.write("**La data au service du cinéma de proximité.**")
 
-    b1, b2 = st.columns(2)
-    with b1:
-        st.button("▶ Découvrir le projet", use_container_width=True)
-    with b2:
-        st.button("📍 Explorer la carte", use_container_width=True)
+st.write(
+    "CinéData Creuse naît de la rencontre entre un cinéma indépendant de la Creuse "
+    "et la puissance de l'analyse de données. Moderniser sans perdre l'âme locale — "
+    "c'est notre mission chez TetraData."
+)
 
-with right:
-    st.subheader("Département de la Creuse — 23")
-    st.caption("Aperçu (indicatif) des cinémas partenaires")
 
 
 st.divider()
+
+st.markdown("""
+<style>
+button[data-baseweb="tab"] {
+    font-size: 1.2rem;
+    padding: 1rem 2.5rem;
+    letter-spacing: 0.08em;
+}
+div[data-testid="stTabs"] > div:first-child {
+    justify-content: center;
+}
+</style>
+""", unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["Notre Projet", "La Creuse", "TetraData"])
 
@@ -113,3 +115,33 @@ with tab1 :
         st.write(", ".join(outils))
 
     
+with tab3:
+    col1, col2, col3 = st.columns(3, gap="large")
+    with col1:
+        st.image("assets/logo_blanc_DT.png")
+    with col2:
+        st.markdown("""
+        **TetraData** est née de la rencontre de plusieurs experts en data, unis par la passion
+        de transformer les données en décisions stratégiques pour des clients dans divers secteurs d'activité.
+
+        Des entreprises comme **Coca-Cola, Netflix, Leboncoin, Air France** et **Peugeot** nous ont fait confiance.
+        Nous sommes engagés autour de certifications reconnues : Lean 6 Sigma, label RSE et Great Place to Work.
+
+        Notre équipe travaille selon la **méthode Agile** : à partir d'un Backlog Produit, nous planifions des sprints
+        rythmés par des réunions d'équipe, des revues de sprint et des rétrospectives, jusqu'à la livraison du travail terminé.
+
+        **Nos outils au quotidien :** Excel, Power BI, Streamlit, GitHub, Discord, Google Drive, VS Code et Python.
+        """)
+    with col3:
+        st.markdown("""
+        **TetraData** est née de la rencontre de plusieurs experts en data, unis par la passion
+        de transformer les données en décisions stratégiques pour des clients dans divers secteurs d'activité.
+
+        Des entreprises comme **Coca-Cola, Netflix, Leboncoin, Air France** et **Peugeot** nous ont fait confiance.
+        Nous sommes engagés autour de certifications reconnues : Lean 6 Sigma, label RSE et Great Place to Work.
+
+        Notre équipe travaille selon la **méthode Agile** : à partir d'un Backlog Produit, nous planifions des sprints
+        rythmés par des réunions d'équipe, des revues de sprint et des rétrospectives, jusqu'à la livraison du travail terminé.
+
+        **Nos outils au quotidien :** Excel, Power BI, Streamlit, GitHub, Discord, Google Drive, VS Code et Python.
+        """)
