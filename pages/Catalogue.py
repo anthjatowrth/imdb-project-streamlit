@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pycountry
 import streamlit as st
+from babel import Locale
 
 from src.ui import render_sidebar
 from src.config import OUTPUT_DIR
-from src.utils import load_css, normalize_txt, read_csv_clean_columns, pick_poster_url, translate_to_fr, format_countries_fr
+from src.utils import load_css, normalize_txt, read_csv_clean_columns, pick_poster_url, translate_to_fr, parse_simple_list
 
 st.set_page_config(page_title="Catalogue", layout="wide")
 
@@ -59,6 +61,52 @@ def rank_base(d: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def country_code_to_fr_name(code: str) -> str:
+    """Convertit un code alpha-2 en nom de pays en français."""
+    c = str(code).strip().upper()
+    try:
+        loc = Locale.parse("fr")
+        country = (
+            pycountry.countries.get(alpha_2=c)
+            or pycountry.countries.get(alpha_3=c)
+        )
+        if country:
+            return loc.territories.get(country.alpha_2, country.name)
+    except Exception:
+        pass
+    return c
+
+
+def fr_name_to_country_code(name: str, name_to_code_map: dict[str, str]) -> str | None:
+    """Retrouve le code alpha-2 depuis un nom français."""
+    return name_to_code_map.get(name)
+
+
+@st.cache_data(show_spinner=False)
+def build_country_options(pays_serie: tuple) -> tuple[list[str], dict[str, str]]:
+    """
+    Construit la liste unique de noms de pays en français
+    et le dictionnaire {nom_fr: code_alpha2} pour le filtrage.
+    """
+    all_codes: set[str] = set()
+    for val in pays_serie:
+        codes = parse_simple_list(val)
+        for code in codes:
+            c = code.strip().upper()
+            if c:
+                all_codes.add(c)
+
+    name_to_code: dict[str, str] = {}
+    for code in all_codes:
+        name = country_code_to_fr_name(code)
+        # En cas de collision (deux codes → même nom), on garde le premier
+        if name not in name_to_code:
+            name_to_code[name] = code
+
+    sorted_names = sorted(name_to_code.keys())
+    return sorted_names, name_to_code
+
+
 @st.cache_data(show_spinner=False)
 def load_df(path: str) -> pd.DataFrame:
     return read_csv_clean_columns(path)
@@ -80,12 +128,16 @@ def prepare_df(path: str) -> pd.DataFrame:
     coerce_num(df, "Note_moyenne", np.nan)
     coerce_num(df, "Nombre_votes", 0)
 
-
     df["_pop_score"] = df["Popularité"].astype(str).str.lower().map(POPULARITY_MAP).fillna(0).astype(int)
     df["_genre_list"] = df["Genre"].apply(split_csv_list)
     df["_dir_n"] = df["Réalisateurs"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
     df["_cast_n"] = df["Casting"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
-    df["_country_n"] = df["Pays_origine"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
+
+    # _country_codes : liste de codes alpha-2 en majuscules pour chaque film
+    df["_country_codes"] = df["Pays_origine"].apply(
+        lambda val: [c.strip().upper() for c in parse_simple_list(val) if c.strip()]
+    )
+
     df["_title_raw"] = df["Titre"].fillna("").astype(str).str.strip()
     df["_title_n"] = df["_title_raw"].map(lambda x: normalize_txt(x, collapse_spaces=True))
 
@@ -217,10 +269,15 @@ genre_choice = st.sidebar.multiselect(
     help="Un film est gardé s'il contient au moins un des genres sélectionnés.",
     placeholder="Choisissez un ou plusieurs genres",)
 
-countries = sorted({x for x in df_ranked["_country_n"].unique().tolist() if x})
+# ── Multiselect Pays : noms français, filtrage par codes ──────────────────────
+country_names_sorted, name_to_code_map = build_country_options(
+    tuple(df_ranked["Pays_origine"].tolist())
+)
+
 country_choice = st.sidebar.multiselect(
-    "Origine (Pays)", options=countries, default=[],
+    "Origine (Pays)", options=country_names_sorted, default=[],
     placeholder="Choisissez un pays d'origine",
+    help="Un film est gardé s'il est associé à au moins un des pays sélectionnés.",
 )
 
 director_query = st.sidebar.text_input("Réalisateur (contient)", placeholder="ex: Nolan")
@@ -247,8 +304,16 @@ if genre_choice:
     mask &= df_ranked["_genre_list"].apply(lambda lst: any(normalize_txt(translate_to_fr(g), collapse_spaces=True) in chosen for g in lst))
 
 if country_choice:
-    chosen_c = [normalize_txt(c, collapse_spaces=True) for c in country_choice]
-    mask &= df_ranked["_country_n"].apply(lambda s: any(c in s for c in chosen_c))
+    # Reconvertit les noms français sélectionnés en codes alpha-2
+    selected_codes = {
+        name_to_code_map[name]
+        for name in country_choice
+        if name in name_to_code_map
+    }
+    # Garde les films qui ont AU MOINS UN des codes sélectionnés dans leur liste
+    mask &= df_ranked["_country_codes"].apply(
+        lambda codes: any(c in selected_codes for c in codes)
+    )
 
 if director_query.strip():
     q = normalize_txt(director_query, collapse_spaces=True)
