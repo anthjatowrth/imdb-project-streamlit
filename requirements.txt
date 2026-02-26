@@ -2,6 +2,7 @@ altair==6.0.0
 annotated-types==0.7.0
 asttokens==3.0.1
 attrs==25.4.0
+babel==2.18.0
 bcrypt==5.0.0
 beautifulsoup4==4.14.3
 blinker==1.9.0
@@ -23,6 +24,7 @@ cycler==0.12.1
 cymem==2.0.13
 debugpy==1.8.20
 decorator==5.2.1
+deep-translator==1.11.4
 duckdb==1.4.3
 executing==2.2.1
 extra-streamlit-components==0.1.81
@@ -71,6 +73,7 @@ protobuf==6.33.4
 psutil==7.2.2
 pure_eval==0.2.3
 pyarrow==23.0.0
+pycountry==26.2.16
 pycparser==3.0
 pydantic==2.12.5
 pydantic_core==2.41.5
