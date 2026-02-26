@@ -6,7 +6,7 @@ import streamlit as st
 
 from src.ui import render_sidebar
 from src.config import OUTPUT_DIR
-from src.utils import load_css, normalize_txt, read_csv_clean_columns, pick_poster_url
+from src.utils import load_css, normalize_txt, read_csv_clean_columns, pick_poster_url, translate_to_fr, format_countries_fr
 
 st.set_page_config(page_title="Catalogue", layout="wide")
 
@@ -79,6 +79,7 @@ def prepare_df(path: str) -> pd.DataFrame:
     df["Année_de_sortie"] = pd.to_numeric(df["Année_de_sortie"], errors="coerce").fillna(0).astype(int)
     coerce_num(df, "Note_moyenne", np.nan)
     coerce_num(df, "Nombre_votes", 0)
+
 
     df["_pop_score"] = df["Popularité"].astype(str).str.lower().map(POPULARITY_MAP).fillna(0).astype(int)
     df["_genre_list"] = df["Genre"].apply(split_csv_list)
@@ -210,12 +211,11 @@ df_ranked = prepare_df(str(CSV_PATH))
 
 st.sidebar.header("Filtres")
 
-all_genres = sorted({g for lst in df_ranked["_genre_list"] for g in lst if g})
+all_genres = sorted({translate_to_fr(g).capitalize() for lst in df_ranked["_genre_list"] for g in lst if g})
 genre_choice = st.sidebar.multiselect(
     "Genre", options=all_genres, default=[],
     help="Un film est gardé s'il contient au moins un des genres sélectionnés.",
-    placeholder="Choisissez un ou plusieurs genres",
-)
+    placeholder="Choisissez un ou plusieurs genres",)
 
 countries = sorted({x for x in df_ranked["_country_n"].unique().tolist() if x})
 country_choice = st.sidebar.multiselect(
@@ -243,8 +243,8 @@ if st.sidebar.button("Réinitialiser les filtres"):
 mask = pd.Series(True, index=df_ranked.index)
 
 if genre_choice:
-    chosen = [normalize_txt(g, collapse_spaces=True) for g in genre_choice]
-    mask &= df_ranked["_genre_list"].apply(lambda lst: any(g in lst for g in chosen))
+    chosen = [normalize_txt(translate_to_fr(g), collapse_spaces=True) for g in genre_choice]
+    mask &= df_ranked["_genre_list"].apply(lambda lst: any(normalize_txt(translate_to_fr(g), collapse_spaces=True) in chosen for g in lst))
 
 if country_choice:
     chosen_c = [normalize_txt(c, collapse_spaces=True) for c in country_choice]

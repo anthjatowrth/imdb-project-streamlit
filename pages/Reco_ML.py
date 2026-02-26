@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import pandas as pd
 import streamlit as st
@@ -16,18 +18,45 @@ st.set_page_config(page_title="Recommandations", layout="wide")
 load_css()
 
 
-# ── Chargement des données ────────────────────────────────────────────────────
+ASSETS_DIR = Path(__file__).resolve().parent / "assets"
+if not ASSETS_DIR.exists():
+    # fallback courant si le fichier est dans un sous-dossier (ex: src/pages/)
+    ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 
+BADGE_FILES = {
+    "high": "badge_super_similaire.svg",
+    "mid": "badge_un_peu_similaire.svg",
+    "low": "badge_a_decouvrir.svg",
+}
+
+@st.cache_data(show_spinner=False)
+def svg_to_data_uri(svg_path: str | Path) -> str:
+    """Convertit un SVG local en data URI utilisable dans <img src='...'>."""
+    p = Path(svg_path)
+    svg_text = p.read_text(encoding="utf-8")
+    return "data:image/svg+xml;utf8," + quote(svg_text)
+
+def similarity_badge(distance: Any) -> tuple[str, str]:
+    """Retourne (badge_key, label) à partir de distance_cosine."""
+    d = pd.to_numeric(distance, errors="coerce")
+
+    # Seuils fixes (à ajuster)
+    if d <= 0.40:
+        return ("high", "Très similaire")
+    elif d <= 0.6:
+        return ("mid", "Un peu similaire")
+    else:
+        return ("low", "Pas trop similaire")
+
+# ── Chargement des données ────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False)
 def load_df() -> pd.DataFrame:
     return read_csv_clean_columns(CSV_PATH)
 
-
-@st.cache_resource(show_spinner=True)
+@st.cache_resource(show_spinner=False)
 def load_artifacts() -> dict:
     df_ = load_df()
     return build_artifacts(df_)
-
 
 @st.cache_data(show_spinner=False)
 def _row_by_id(movie_id: str) -> pd.Series | None:
@@ -38,7 +67,6 @@ def _row_by_id(movie_id: str) -> pd.Series | None:
     if tmp.empty:
         return None
     return tmp.iloc[0]
-
 
 @st.cache_data(show_spinner=False)
 def build_select_index() -> list[dict]:
@@ -51,7 +79,6 @@ def build_select_index() -> list[dict]:
     tmp["ID"] = tmp["ID"].astype(str)
     tmp = tmp.sort_values(["votes", "year", "title"], ascending=[False, False, True])
     return tmp[["ID", "title", "year", "director", "votes"]].to_dict("records")
-
 
 def get_forced_5x3_recos(
     artifacts: dict,
@@ -85,9 +112,7 @@ def get_forced_5x3_recos(
     selected = selected.sort_values(["__cat_order", "distance_cosine"], ascending=[True, True])
     return selected.drop(columns="__cat_order")
 
-
 # ── Sidebar ───────────────────────────────────────────────────────────────────
-
 def render_selected_movie_in_sidebar() -> None:
     movie_id = st.session_state.get("selected_movie_id", "")
     if not movie_id:
@@ -126,7 +151,6 @@ def render_selected_movie_in_sidebar() -> None:
         """,
         unsafe_allow_html=True,
     )
-
 
 select_options = build_select_index()
 
@@ -176,7 +200,6 @@ with col1:
         st.session_state.selected_movie_id = ""
         st.session_state.selected_title = ""
 
-
 with col2:
     year_min, year_max = st.slider(
         "Période de sortie", min_value=1950, max_value=2025, value=(1950, 2025), step=1,
@@ -218,14 +241,14 @@ if reco_df is not None:
     }
 
     for cat in target_order:
-        cls, display_title, subtitle = cat_info[cat]   # ← on déstructure 3 valeurs
+        cls, display_title, subtitle = cat_info[cat]
         block = reco_df[reco_df["Popularité"] == cat].head(5)
 
         with st.container(border=True):
             st.markdown(
                 f"""
                 <div class="cat-header">
-                    <div class="cat-title">{display_title}</div>  <!-- ← display_title au lieu de cat -->
+                    <div class="cat-title">{display_title}</div>
                     <div class="cat-sub">{subtitle}</div>
                 </div>
                 """,
@@ -247,6 +270,14 @@ if reco_df is not None:
                         votes = row.get("Nombre_votes", "—")
                         detail_href = f"Film_details?id={row['ID']}"
 
+                        badge_key, badge_label = similarity_badge(row.get("distance_cosine"))
+                        badge_filename = BADGE_FILES.get(badge_key)
+                        badge_path = ASSETS_DIR / badge_filename
+                        try:
+                            badge_uri = svg_to_data_uri(badge_path)
+                        except FileNotFoundError:
+                            badge_uri = ""
+
                         bg_style = f"style=\"--bg: url('{poster_url}');\"" if poster_url else ""
 
                         if poster_url:
@@ -259,6 +290,13 @@ if reco_df is not None:
                                 "</div>"
                             )
 
+                        badge_img_html = (
+                            f"<img class='sim-badge-img' src='{badge_uri}' alt='{badge_label}' "
+                            f"title='{badge_label} (distance={row.get('distance_cosine')})'/>"
+                            if badge_uri
+                            else ""
+                        )
+
                         st.markdown(
                             f"""
                             <div class="reco-card" {bg_style} title="{full_title}">
@@ -268,6 +306,7 @@ if reco_df is not None:
                               <div class="reco-spacer"></div>
                               <div class="reco-btn-wrap">
                                 <a class="reco-btn" href="{detail_href}">Voir la fiche</a>
+                                {badge_img_html}
                               </div>
                             </div>
                             """,

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="130" height="26" viewBox="0 0 130 26">
+  <rect x="1" y="1" width="128" height="24" rx="12" fill="#22c55e" fill-opacity="0.15" stroke="#22c55e" stroke-width="1.5"/>
+  <circle cx="14" cy="13" r="4" fill="#22c55e"/>
+  <text x="26" y="17" font-family="system-ui, sans-serif" font-size="11" font-weight="600" fill="#16a34a">Super similaire !</text>
+</svg>
