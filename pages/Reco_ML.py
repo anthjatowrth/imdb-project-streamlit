@@ -19,20 +19,21 @@ load_css()
 # ── Chargement des données ────────────────────────────────────────────────────
 
 @st.cache_data(show_spinner=False)
-def load_df(path: str) -> pd.DataFrame:
-    return read_csv_clean_columns(path)
+def load_df() -> pd.DataFrame:
+    return read_csv_clean_columns(CSV_PATH)
 
 
 @st.cache_resource(show_spinner=True)
-def load_artifacts(path: str) -> dict:
-    df_ = load_df(path)
+def load_artifacts() -> dict:
+    df_ = load_df()
     return build_artifacts(df_)
 
 
 @st.cache_data(show_spinner=False)
-def _row_by_id(df_: pd.DataFrame, movie_id: str) -> pd.Series | None:
+def _row_by_id(movie_id: str) -> pd.Series | None:
     if not movie_id:
         return None
+    df_ = load_df()
     tmp = df_[df_["ID"].astype(str) == str(movie_id)]
     if tmp.empty:
         return None
@@ -40,8 +41,8 @@ def _row_by_id(df_: pd.DataFrame, movie_id: str) -> pd.Series | None:
 
 
 @st.cache_data(show_spinner=False)
-def build_select_index(df_: pd.DataFrame) -> list[dict]:
-    tmp = df_[["ID", "Titre", "Année_de_sortie", "Réalisateurs", "Nombre_votes"]].copy()
+def build_select_index() -> list[dict]:
+    tmp = load_df()[["ID", "Titre", "Année_de_sortie", "Réalisateurs", "Nombre_votes"]].copy()
     tmp["title"] = tmp["Titre"].astype(str).str.strip()
     tmp = tmp[tmp["title"] != ""]
     tmp["year"] = pd.to_numeric(tmp["Année_de_sortie"], errors="coerce").fillna(0).astype(int)
@@ -87,12 +88,12 @@ def get_forced_5x3_recos(
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
-def render_selected_movie_in_sidebar(df_: pd.DataFrame) -> None:
+def render_selected_movie_in_sidebar() -> None:
     movie_id = st.session_state.get("selected_movie_id", "")
     if not movie_id:
         return
 
-    row = _row_by_id(df_, str(movie_id))
+    row = _row_by_id(str(movie_id))
     if row is None:
         return
 
@@ -127,14 +128,13 @@ def render_selected_movie_in_sidebar(df_: pd.DataFrame) -> None:
     )
 
 
-df = load_df(str(CSV_PATH))
-select_options = build_select_index(df)
+select_options = build_select_index()
 
 st.session_state.setdefault("selected_movie_id", "")
 st.session_state.setdefault("selected_title", "")
 st.session_state.setdefault("reco_df", None)
 
-render_sidebar(extra=lambda: render_selected_movie_in_sidebar(df))
+render_sidebar(extra=lambda: render_selected_movie_in_sidebar())
 
 # ── En-tête de page ───────────────────────────────────────────────────────────
 st.markdown(
@@ -191,7 +191,7 @@ with col3:
 run = st.button("Lancer la recommandation", type="primary")
 
 if run:
-    artifacts = load_artifacts(str(CSV_PATH))
+    artifacts = load_artifacts()
     movie_id = st.session_state.selected_movie_id
     if not movie_id:
         st.warning("Choisis d'abord un film de référence 🙂")

@@ -193,7 +193,7 @@ except Exception:
 if recs is None or recs.empty:
     st.caption("Aucune recommandation disponible.")
 else:
-    cols = st.columns(5, gap="medium", vertical_alignment="top")
+    cols = st.columns(5, gap="small", vertical_alignment="top")
 
     for i, (_, row) in enumerate(recs.head(5).iterrows()):
         with cols[i]:
@@ -203,14 +203,15 @@ else:
             year = row.get("Année_de_sortie", "—")
             rating = row.get("Note_moyenne", "—")
             votes = row.get("Nombre_votes", "—")
-            genre = row.get("Genre", "—")
-            director = row.get("Réalisateurs", "—")
+            detail_href = f"Film_details?id={row['ID']}"
+
+            bg_style = f"style=\"--bg: url('{poster_url}');\"" if poster_url else ""
 
             if poster_url:
-                poster_html = f"<img class='mini-poster' src='{poster_url}' alt='poster'/>"
+                poster_html = f"<img class='reco-poster' src='{poster_url}' alt='poster'/>"
             else:
                 poster_html = (
-                    "<div class='mini-poster' "
+                    "<div class='reco-poster' "
                     "style='display:flex;align-items:center;justify-content:center;'>"
                     "<span style='font-size:0.8rem;color:rgba(168,168,192,0.95)'>Poster indisponible</span>"
                     "</div>"
@@ -218,17 +219,15 @@ else:
 
             st.markdown(
                 f"""
-                <div class="mini-card" title="{full_title} • {year} • {director} • {genre}">
+                <div class="reco-card" {bg_style} title="{full_title}">
                   {poster_html}
-                  <div class="mini-title"><b>{title_short}</b></div>
-                  <p class="mini-meta">{year} • ⭐ {rating} • 👥 {fmt_votes(votes)}</p>
+                  <div class="reco-title">{title_short}</div>
+                  <div class="reco-meta">{year} • ⭐ {rating} • 👥 {fmt_votes(votes)}</div>
+                  <div class="reco-spacer"></div>
+                  <div class="reco-btn-wrap">
+                    <a class="reco-btn" href="{detail_href}">Voir la fiche</a>
+                  </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
-            )
-
-            st.page_link(
-                "pages/Film_details.py",
-                label="Voir la fiche",
-                query_params={"id": str(row["ID"])},
             )
