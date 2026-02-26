@@ -11,9 +11,9 @@ import numpy as np
 import pandas as pd
 import requests
 import pycountry
+import streamlit as st
 
 from deep_translator import GoogleTranslator
-from functools import lru_cache
 from babel import Locale
 
 
@@ -117,7 +117,7 @@ def find_movie_row(df: pd.DataFrame, title: str, col: str = "Titre") -> pd.Serie
 
 # ── Formatage ─────────────────────────────────────────────────────────────────
 
-@lru_cache(maxsize=5000)
+@st.cache_data(show_spinner=False, max_entries=10000)
 def translate_to_fr(text: str) -> str:
     if not text or not isinstance(text, str):
         return ""
@@ -241,6 +241,12 @@ def _fetch_omdb_poster(
         return None
 
 
+@st.cache_data(show_spinner=False, ttl=86400)  # cache 24h
+def _cached_omdb_poster(imdb_id: str, api_key: str) -> str | None:
+    """Cache les résultats OMDB pour éviter les appels réseau répétés."""
+    return _fetch_omdb_poster(imdb_id, api_key=api_key)
+
+
 def pick_poster_url(
     row: pd.Series,
     cols: tuple[str, ...] = ("Poster1", "Poster2"),
@@ -272,27 +278,38 @@ def pick_poster_url(
     if not key:
         return None
 
-    return _fetch_omdb_poster(
-        imdb_id,
-        api_key=key,
-        session=session,
-        timeout=omdb_timeout,
-    )
+    return _cached_omdb_poster(imdb_id, key)
 
 
 # ── CSS / UI ──────────────────────────────────────────────────────────────────
 
-def load_css(
-    css_path: str = "assets/style.css",
-    bg_path: str = "assets/fond2.png",
-) -> None:
-    try:
-        import streamlit as st
-    except Exception:
-        return
-
+@st.cache_data(show_spinner=False)
+def _build_css_payload(css_path: str, bg_path: str) -> str:
+    """
+    Construit le bloc <style> complet une seule fois, puis le met en cache
+    pour toute la durée de vie du process (partagé entre tous les utilisateurs).
+    Le fond PNG est redimensionné + converti en JPEG pour réduire drastiquement
+    la taille du payload base64 (1.9 MB PNG → ~60-120 KB JPEG).
+    """
     css = Path(css_path).read_text(encoding="utf-8")
-    bg_b64 = base64.b64encode(Path(bg_path).read_bytes()).decode("utf-8")
+
+    # Compression du fond : PNG 1.9 MB → JPEG ~80 KB
+    try:
+        from PIL import Image
+        import io
+        img = Image.open(bg_path).convert("RGB")
+        # On descend à 1280px max (largeur d'affichage suffisante avec blur)
+        img.thumbnail((1280, 1280), Image.LANCZOS)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=60, optimize=True)
+        bg_bytes = buf.getvalue()
+        mime = "image/jpeg"
+    except Exception:
+        # Fallback : PNG brut si Pillow absent
+        bg_bytes = Path(bg_path).read_bytes()
+        mime = "image/png"
+
+    bg_b64 = base64.b64encode(bg_bytes).decode("utf-8")
 
     bg_css = f"""
     .stApp{{ position: relative; }}
@@ -301,7 +318,7 @@ def load_css(
         content:"";
         position: fixed;
         inset: -120px;
-        background-image: url("data:image/png;base64,{bg_b64}");
+        background-image: url("data:{mime};base64,{bg_b64}");
         background-repeat: no-repeat;
         background-position: center;
         background-size: cover;
@@ -327,4 +344,17 @@ def load_css(
     .stApp > *{{ position: relative; z-index: 1; }}
     """
 
-    st.markdown(f"<style>{css}\n{bg_css}</style>", unsafe_allow_html=True)
+    return f"<style>{css}\n{bg_css}</style>"
+
+
+def load_css(
+    css_path: str = "assets/style.css",
+    bg_path: str = "assets/fond2.png",
+) -> None:
+    try:
+        import streamlit as st
+    except Exception:
+        return
+
+    payload = _build_css_payload(css_path, bg_path)
+    st.markdown(payload, unsafe_allow_html=True)
