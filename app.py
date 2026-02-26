@@ -8,7 +8,46 @@ st.set_page_config(
 )
 load_css()
 render_sidebar()
-st.image('assets/logo_noir.png')
+
+st.markdown(
+    """
+<div style="text-align:center; margin: 2rem 0 1.5rem 0;">
+  <div style="
+      font-family:'Bebas Neue', Impact, sans-serif;
+      font-size: clamp(3rem, 5vw, 5rem);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: linear-gradient(90deg,#ffffff,#d7d9ff,#a99fff,#ffffff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 12px rgba(123,104,238,0.35), 0 0 35px rgba(123,104,238,0.18);
+  ">
+    Bienvenue sur CinéData
+  </div>
+
+  <div style="
+      color: rgba(210,210,235,0.9);
+      font-size: 1.15rem;
+      margin-top: 0.6rem;
+      letter-spacing: 0.04em;
+  ">
+    Explore, découvre et trouve ton prochain chef-d’œuvre.
+  </div>
+
+  <div style="
+      width: 120px;
+      height: 3px;
+      margin: 20px auto 0;
+      background: linear-gradient(90deg, transparent, #7b68ee, transparent);
+      box-shadow: 0 0 15px rgba(123,104,238,0.6);
+  "></div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
+col1, col2, col3 = st.columns([1,1,1])
+with col2:
+    st.image("assets/logo_noir.png", width=250)
 # ---------------------------------------------------------------------
 # HERO (base)
 # ---------------------------------------------------------------------
@@ -36,38 +75,6 @@ with right:
     st.subheader("Département de la Creuse — 23")
     st.caption("Aperçu (indicatif) des cinémas partenaires")
 
-    # Optionnel : un mini SVG (tu peux supprimer ce bloc si tu veux 0 HTML)
-    st.markdown(
-        """
-        <svg viewBox="0 0 400 360" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
-          <path d="
-            M 80,40 C 90,30 110,25 130,28
-            L 160,22 C 185,18 210,20 230,30
-            L 260,28 C 290,25 320,35 340,50
-            L 355,75 C 365,95 362,120 355,140
-            L 360,165 C 368,190 365,215 355,235
-            L 340,258 C 325,278 300,292 275,298
-            L 250,310 C 225,318 200,320 175,315
-            L 148,308 C 122,300 100,285 84,265
-            L 65,242 C 48,220 42,195 45,170
-            L 42,145 C 40,118 48,92 62,70
-            Z" fill="currentColor" opacity="0.12" stroke="currentColor" stroke-width="2"/>
-
-          <circle cx="195" cy="165" r="6" fill="currentColor" opacity="0.7"/>
-          <text x="208" y="162" font-size="12" fill="currentColor">Guéret</text>
-
-          <circle cx="248" cy="215" r="5" fill="currentColor" opacity="0.6"/>
-          <text x="260" y="219" font-size="12" fill="currentColor">Aubusson</text>
-
-          <circle cx="155" cy="225" r="5" fill="currentColor" opacity="0.55"/>
-          <text x="105" y="222" font-size="11" fill="currentColor">Bourganeuf</text>
-
-          <circle cx="112" cy="148" r="5" fill="currentColor" opacity="0.55"/>
-          <text x="52" y="144" font-size="11" fill="currentColor">La Souterraine</text>
-        </svg>
-        """,
-        unsafe_allow_html=True,
-    )
 
 st.divider()
 

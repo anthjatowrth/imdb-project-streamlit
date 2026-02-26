@@ -17,7 +17,12 @@ if "go_to_title" in st.session_state:
 load_css()
 render_sidebar()
 
-st.title("📚 Catalogue des films")
+st.markdown(
+    """
+    <div class="page-title">Explore notre catalogue de films  📽</div>
+    """,
+    unsafe_allow_html=True,
+)
 st.caption("Filtre le catalogue. Résultats triés par Popularité ↓, Note ↓, Votes ↓. Affichage paginé par 24.")
 
 CSV_PATH = OUTPUT_DIR / "10_final_imdb_tmdb.csv"
