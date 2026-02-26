@@ -3,7 +3,6 @@
 # ======================
 data/raw/
 data/interim/
-data/output/
 
 # ======================
 # Python
