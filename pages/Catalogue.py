@@ -8,7 +8,8 @@ from babel import Locale
 
 from src.ui import render_sidebar
 from src.config import OUTPUT_DIR
-from src.utils import load_css, normalize_txt, read_csv_clean_columns, pick_poster_url, translate_to_fr, parse_simple_list
+from src.utils import load_css, normalize_txt, read_csv_clean_columns, pick_poster_url, parse_simple_list
+from src.genre_translations import translate_genre_to_fr
 
 st.set_page_config(page_title="Catalogue", layout="wide")
 
@@ -99,7 +100,6 @@ def build_country_options(pays_serie: tuple) -> tuple[list[str], dict[str, str]]
     name_to_code: dict[str, str] = {}
     for code in all_codes:
         name = country_code_to_fr_name(code)
-        # En cas de collision (deux codes → même nom), on garde le premier
         if name not in name_to_code:
             name_to_code[name] = code
 
@@ -133,7 +133,6 @@ def prepare_df(path: str) -> pd.DataFrame:
     df["_dir_n"] = df["Réalisateurs"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
     df["_cast_n"] = df["Casting"].fillna("").astype(str).map(lambda x: normalize_txt(x, collapse_spaces=True))
 
-    # _country_codes : liste de codes alpha-2 en majuscules pour chaque film
     df["_country_codes"] = df["Pays_origine"].apply(
         lambda val: [c.strip().upper() for c in parse_simple_list(val) if c.strip()]
     )
@@ -142,6 +141,17 @@ def prepare_df(path: str) -> pd.DataFrame:
     df["_title_n"] = df["_title_raw"].map(lambda x: normalize_txt(x, collapse_spaces=True))
 
     return rank_base(df)
+
+
+@st.cache_data(show_spinner=False)
+def get_all_genres(path: str) -> list[str]:
+    """Construit la liste triée des genres traduits en français. Mis en cache."""
+    df = prepare_df(path)
+    return sorted({
+        translate_genre_to_fr(g)
+        for lst in df["_genre_list"]
+        for g in lst if g
+    })
 
 
 def _safe_text(x: object) -> str:
@@ -163,12 +173,12 @@ def _search_rank(df: pd.DataFrame, typed: str) -> pd.Series:
     t = df["_title_n"]
     exact = (t == q).astype("int64") * 1_000_000
     starts = t.str.startswith(q, na=False).astype("int64") * 100_000
-    contains = t.str.contains(q, na=False).astype("int64") * 10_000
+    contains = t.str.contains(q, na=False, regex=False).astype("int64") * 10_000
 
     n_tokens = max(1, len(q.split()))
     token_hits = pd.Series(0, index=df.index, dtype="int64")
     for tok in q.split():
-        token_hits += t.str.contains(tok, na=False).astype("int64")
+        token_hits += t.str.contains(tok, na=False, regex=False).astype("int64")
     token_score = (token_hits * (1000 // n_tokens)).astype("int64")
 
     return exact + starts + contains + token_score
@@ -258,18 +268,22 @@ def render_grid(d: pd.DataFrame, n_cols: int = 6) -> None:
         st.markdown('</div>', unsafe_allow_html=True)
 
 
-# ── Filtres sidebar ───────────────────────────────────────────────────────────
+# ── Chargement ────────────────────────────────────────────────────────────────
 df_ranked = prepare_df(str(CSV_PATH))
 
+# ── Filtres sidebar ───────────────────────────────────────────────────────────
 st.sidebar.header("Filtres")
 
-all_genres = sorted({translate_to_fr(g).capitalize() for lst in df_ranked["_genre_list"] for g in lst if g})
-genre_choice = st.sidebar.multiselect(
+# Genres : liste construite une seule fois grâce au cache
+all_genres = get_all_genres(str(CSV_PATH))
+
+genre_choice = st.sidebar.multiselect(          # ← était manquant !
     "Genre", options=all_genres, default=[],
     help="Un film est gardé s'il contient au moins un des genres sélectionnés.",
-    placeholder="Choisissez un ou plusieurs genres",)
+    placeholder="Choisissez un ou plusieurs genres",
+)
 
-# ── Multiselect Pays : noms français, filtrage par codes ──────────────────────
+# Pays
 country_names_sorted, name_to_code_map = build_country_options(
     tuple(df_ranked["Pays_origine"].tolist())
 )
@@ -281,7 +295,7 @@ country_choice = st.sidebar.multiselect(
 )
 
 director_query = st.sidebar.text_input("Réalisateur (contient)", placeholder="ex: Nolan")
-actor_query = st.sidebar.text_input("Acteur / Actrice (contient)", placeholder="ex: Scarlett")
+actor_query    = st.sidebar.text_input("Acteur / Actrice (contient)", placeholder="ex: Scarlett")
 
 note_min = st.sidebar.slider("Note minimale", 0.0, 10.0, 0.0, 0.1)
 year_min, year_max = st.sidebar.slider("Année de sortie", 1950, 2025, (1950, 2025), 1)
@@ -300,17 +314,23 @@ if st.sidebar.button("Réinitialiser les filtres"):
 mask = pd.Series(True, index=df_ranked.index)
 
 if genre_choice:
-    chosen = [normalize_txt(translate_to_fr(g), collapse_spaces=True) for g in genre_choice]
-    mask &= df_ranked["_genre_list"].apply(lambda lst: any(normalize_txt(translate_to_fr(g), collapse_spaces=True) in chosen for g in lst))
+    # Les genres sélectionnés sont déjà en français (ex: "Action") ;
+    # on les normalise pour comparer avec _genre_list (stocké en anglais normalisé).
+    # On traduit donc dans les deux sens via translate_genre_to_fr.
+    chosen_n = {normalize_txt(g, collapse_spaces=True) for g in genre_choice}
+    mask &= df_ranked["_genre_list"].apply(
+        lambda lst: any(
+            normalize_txt(translate_genre_to_fr(g), collapse_spaces=True) in chosen_n
+            for g in lst
+        )
+    )
 
 if country_choice:
-    # Reconvertit les noms français sélectionnés en codes alpha-2
     selected_codes = {
         name_to_code_map[name]
         for name in country_choice
         if name in name_to_code_map
     }
-    # Garde les films qui ont AU MOINS UN des codes sélectionnés dans leur liste
     mask &= df_ranked["_country_codes"].apply(
         lambda codes: any(c in selected_codes for c in codes)
     )
@@ -345,7 +365,7 @@ typed = st.text_input(
 if typed:
     score = _search_rank(filtered, typed)
     qn = normalize_txt(typed, collapse_spaces=True)
-    title_match = filtered["_title_n"].str.contains(qn, na=False) if qn else pd.Series(False, index=filtered.index)
+    title_match = filtered["_title_n"].str.contains(qn, na=False, regex=False) if qn else pd.Series(False, index=filtered.index)
     filtered = filtered.loc[title_match].copy()
     filtered["_q_score"] = score.loc[filtered.index]
     filtered = filtered.sort_values(
@@ -372,7 +392,7 @@ max_pages = max(0, (total - 1) // PAGE_SIZE)
 st.session_state.cat_page = min(st.session_state.cat_page, max_pages)
 
 start = st.session_state.cat_page * PAGE_SIZE
-end = min(start + PAGE_SIZE, total)
+end   = min(start + PAGE_SIZE, total)
 page_df = filtered.iloc[start:end]
 
 # Barre de pagination — haut
