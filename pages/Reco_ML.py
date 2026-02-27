@@ -264,7 +264,7 @@ if reco_df is not None:
                     with cols[i]:
                         poster_url = pick_poster_url(row)
                         full_title = str(row.get("Titre", "—"))
-                        title_short = clip_text(full_title, max_len=34)
+                        title_short = full_title
                         year = row.get("Année_de_sortie", "—")
                         rating = row.get("Note_moyenne", "—")
                         votes = row.get("Nombre_votes", "—")
@@ -300,17 +300,16 @@ if reco_df is not None:
                         st.markdown(
                             f"""
                             <div class="reco-card" {bg_style} title="{full_title}">
-                              {poster_html}
-                              <div class="reco-title">{title_short}</div>
-                              <div class="reco-meta">{year} • ⭐ {rating} • 👥 {fmt_votes(votes)}</div>
-                              <div class="reco-spacer"></div>
-                              <div class="reco-btn-wrap">
-                                <a class="reco-btn" href="{detail_href}">Voir la fiche</a>
+                            {poster_html}
+                            <div class="reco-title">{title_short}</div>
+                            <div class="reco-meta">{year} • ⭐ {rating} • 👥 {fmt_votes(votes)}</div>
+                            <div class="reco-spacer"></div>
+                            <div class="reco-btn-wrap">
                                 {badge_img_html}
-                              </div>
+                                <a class="reco-btn" href="{detail_href}">Voir la fiche</a>
+                            </div>
                             </div>
                             """,
-                            unsafe_allow_html=True,
-                        )
+                            unsafe_allow_html=True,)
 
         st.markdown("<div class='cat-gap'></div>", unsafe_allow_html=True)
