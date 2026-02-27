@@ -259,23 +259,23 @@ with tab1:
 </div>
 
 <div class="flux-panel" style="margin-bottom:0.6rem;">
-  <div class="panel-label">🎬 CLIENT — Cinéma indépendant local</div>
+  <div class="panel-label"> CLIENT — Cinéma indépendant local</div>
   <div class="panel-desc">Acteur culturel essentiel de la Creuse, au cœur du territoire rural creusois.</div>
 </div>
 <div class="flux-panel" style="margin-bottom:0.6rem;">
-  <div class="panel-label">📉 CONSTAT — Baisse de fréquentation</div>
+  <div class="panel-label"> CONSTAT — Baisse de fréquentation</div>
   <div class="panel-desc">Concurrence croissante des plateformes de streaming et désaffection du public.</div>
 </div>
 <div class="flux-panel" style="margin-bottom:0.6rem;">
-  <div class="panel-label">🎯 BESOIN — Mieux comprendre</div>
+  <div class="panel-label"> BESOIN — Mieux comprendre</div>
   <div class="panel-desc">Comprendre les spectateurs et adapter l'offre pour regagner leur fidélité.</div>
 </div>
 <div class="flux-panel" style="margin-bottom:0.6rem;">
-  <div class="panel-label">💡 SOLUTION — Analyse de données</div>
+  <div class="panel-label"> SOLUTION — Analyse de données</div>
   <div class="panel-desc">Moteur de recommandation personnalisée basé sur les données IMDb et TMDb.</div>
 </div>
 <div class="flux-panel" style="margin-bottom:0.6rem;">
-  <div class="panel-label">📦 LIVRABLES — Application + Dashboard</div>
+  <div class="panel-label"> LIVRABLES — Application + Dashboard</div>
   <div class="panel-desc">Appli spectateur + tableau de bord décisionnel pour l'équipe du cinéma.</div>
 </div>
 """, unsafe_allow_html=True)
