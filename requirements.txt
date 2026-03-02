@@ -25,7 +25,6 @@ cymem==2.0.13
 debugpy==1.8.20
 decorator==5.2.1
 deep-translator==1.11.4
-duckdb==1.4.3
 executing==2.2.1
 extra-streamlit-components==0.1.81
 filelock==3.20.3
@@ -98,12 +97,8 @@ six==1.17.0
 smart_open==7.5.0
 smmap==5.0.2
 soupsieve==2.8.3
-spacy==3.8.11
-spacy-legacy==3.0.12
-spacy-loggers==1.0.5
 srsly==2.5.2
 stack-data==0.6.3
-statsmodels==0.14.6
 streamlit==1.53.1
 streamlit-authenticator==0.4.2
 streamlit-option-menu==0.4.0
