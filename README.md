@@ -1,8 +1,8 @@
 ---
 🎬 Movie Recommender App — IMDb & TMDB Data Pipeline
 ---
-Application en ligne :
-==> https://movie-recommender-app.streamlit.app
+==> Demo live :
+https://https://cinedata.streamlit.app/
 
 ---
 🧠 Présentation du projet
@@ -24,10 +24,8 @@ mise en production dans une application Streamlit
 L’objectif est de reproduire, à une échelle réaliste, la chaîne complète d’un produit data.
 
 ---
-🚀 Accéder à l’application
+🚀 Description de l’application
 ---
-==> Demo live :
-https://movie-recommender-app.streamlit.app
 
 L’application permet de :
 
